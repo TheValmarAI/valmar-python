@@ -64,24 +64,6 @@ for part in expert_parts:
     print(f"{part.title} — mentioned members: {part.related_member_ids}")
 ```
 
-### Manage webhooks
-
-Subscribe to events like context request completions.
-
-```python
-# Create a webhook endpoint
-endpoint = client.webhooks.create(
-    project_id="your-project-id",
-    url="https://example.com/webhooks/valmar",
-    events=["context_request.completed"],
-)
-
-print(f"Webhook secret: {endpoint.secret}")
-
-# List all endpoints
-endpoints = client.webhooks.list(project_id="your-project-id")
-```
-
 ### List members
 
 ```python

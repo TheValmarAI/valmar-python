@@ -16,10 +16,8 @@ from valmar.models import (
     ContextSearchResult,
     CreateContextRequestInput,
     CreateMemberInput,
-    CreateWebhookEndpointInput,
     Member,
     SearchContextInput,
-    WebhookEndpoint,
 )
 
 DEFAULT_BASE_URL = "https://api.valmar.dev"
@@ -218,41 +216,6 @@ class MembersNamespace(_Namespace):
 
 
 # ---------------------------------------------------------------------------
-# Webhooks namespace
-# ---------------------------------------------------------------------------
-
-
-class WebhooksNamespace(_Namespace):
-    """Webhook endpoint management."""
-
-    def create(
-        self,
-        project_id: UUID,
-        url: str,
-        events: list[str],
-    ) -> WebhookEndpoint:
-        """Create a webhook endpoint (POST /api/projects/{project_id}/webhooks)."""
-        payload = CreateWebhookEndpointInput(url=url, events=events)
-        resp = self._http.post(
-            f"/api/projects/{project_id}/webhooks",
-            json=payload.model_dump(mode="json"),
-        )
-        resp.raise_for_status()
-        return WebhookEndpoint.model_validate(resp.json())
-
-    def list(self, project_id: UUID) -> list[WebhookEndpoint]:
-        """List webhook endpoints for a project (GET /api/projects/{project_id}/webhooks)."""
-        resp = self._http.get(f"/api/projects/{project_id}/webhooks")
-        resp.raise_for_status()
-        return [WebhookEndpoint.model_validate(w) for w in resp.json()]
-
-    def delete(self, endpoint_id: UUID) -> None:
-        """Delete a webhook endpoint (DELETE /api/webhooks/{endpoint_id})."""
-        resp = self._http.delete(f"/api/webhooks/{endpoint_id}")
-        resp.raise_for_status()
-
-
-# ---------------------------------------------------------------------------
 # Main client
 # ---------------------------------------------------------------------------
 
@@ -301,7 +264,6 @@ class ValmarClient:
         self.knowledge = KnowledgeNamespace(self)
         self.people = PeopleNamespace(self)
         self.members = MembersNamespace(self)
-        self.webhooks = WebhooksNamespace(self)
 
     def close(self) -> None:
         """Close the underlying HTTP client."""

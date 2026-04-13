@@ -136,19 +136,6 @@ class Member(BaseModel):
     description_md: str = ""
 
 
-class WebhookEndpoint(BaseModel):
-    id: UUID
-    created_at: datetime
-    updated_at: datetime
-    organization_id: UUID
-    project_id: UUID | None = None
-    url: str
-    secret: str
-    events: list[str] = Field(default_factory=list)
-    active: bool = True
-    failure_count: int = 0
-
-
 # ---------------------------------------------------------------------------
 # Input models (requests)
 # ---------------------------------------------------------------------------
@@ -195,8 +182,3 @@ class BulkImportMembersResult(BaseModel):
     created: list[BulkImportMemberResult] = Field(default_factory=list)
     skipped: list[BulkImportMemberResult] = Field(default_factory=list)
     errors: list[BulkImportMemberResult] = Field(default_factory=list)
-
-
-class CreateWebhookEndpointInput(BaseModel):
-    url: str
-    events: list[str]

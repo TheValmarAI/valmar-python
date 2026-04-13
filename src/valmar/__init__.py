@@ -16,13 +16,11 @@ from valmar.models import (
     ContextSearchResult,
     CreateContextRequestInput,
     CreateMemberInput,
-    CreateWebhookEndpointInput,
     Member,
     ProjectRole,
     ReviewStatus,
     SearchContextInput,
     ThreadStatus,
-    WebhookEndpoint,
 )
 
 __all__ = [
@@ -42,13 +40,11 @@ __all__ = [
     "ContextSearchResult",
     "CreateContextRequestInput",
     "CreateMemberInput",
-    "CreateWebhookEndpointInput",
     "Member",
     "ProjectRole",
     "ReviewStatus",
     "SearchContextInput",
     "ThreadStatus",
-    "WebhookEndpoint",
 ]
 
 __version__ = "0.1.0"
