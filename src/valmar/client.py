@@ -71,7 +71,7 @@ class KnowledgeResource(_Resource):
             types=[KnowledgeItemType(item) for item in (types or [])],
             related_member_ids=[UUID(str(item)) for item in (related_member_ids or [])],
         )
-        response = self._http.post("/api/context/search", json=payload.model_dump(mode="json"))
+        response = self._http.post("/api/knowledge/search", json=payload.model_dump(mode="json"))
         response.raise_for_status()
         return KnowledgeSearchResult.model_validate(response.json())
 
@@ -99,20 +99,20 @@ class KnowledgeRequestsResource(_Resource):
             ),
         )
         response = self._http.post(
-            "/api/context/requests",
+            "/api/knowledge/requests",
             json=payload.model_dump(mode="json"),
         )
         response.raise_for_status()
         return KnowledgeRequestHandle.model_validate(response.json())
 
     def get(self, knowledge_request_id: UUID | str) -> KnowledgeRequest:
-        response = self._http.get(f"/api/context/requests/{knowledge_request_id}")
+        response = self._http.get(f"/api/knowledge/requests/{knowledge_request_id}")
         response.raise_for_status()
         return KnowledgeRequest.model_validate(response.json())
 
     def list(self) -> list[KnowledgeRequestListItem]:
         response = self._http.get(
-            f"/api/projects/{self._require_project_id()}/context-requests",
+            f"/api/projects/{self._require_project_id()}/knowledge-requests",
         )
         response.raise_for_status()
         return [KnowledgeRequestListItem.model_validate(item) for item in response.json()]
@@ -122,14 +122,14 @@ class PeopleResource(_Resource):
     """Manage organization people that Valmar may contact."""
 
     def list(self) -> list[Person]:
-        response = self._http.get(f"/api/organizations/{self._require_organization_id()}/members")
+        response = self._http.get(f"/api/organizations/{self._require_organization_id()}/people")
         response.raise_for_status()
         return [Person.model_validate(item) for item in response.json()]
 
     def import_bulk(self, people: list[CreatePersonInput]) -> ImportPeopleResult:
-        payload = ImportPeopleInput(members=people)
+        payload = ImportPeopleInput(people=people)
         response = self._http.post(
-            f"/api/organizations/{self._require_organization_id()}/members/import",
+            f"/api/organizations/{self._require_organization_id()}/people/import",
             json=payload.model_dump(mode="json"),
         )
         response.raise_for_status()

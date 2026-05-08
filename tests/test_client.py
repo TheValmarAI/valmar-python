@@ -32,7 +32,7 @@ class ValmarTest(unittest.TestCase):
 
         def handler(request: httpx.Request) -> httpx.Response:
             self.assertEqual(request.method, "POST")
-            self.assertEqual(request.url.path, "/api/context/search")
+            self.assertEqual(request.url.path, "/api/knowledge/search")
             seen_body.update(json.loads(request.content))
             return httpx.Response(
                 200,
@@ -44,7 +44,7 @@ class ValmarTest(unittest.TestCase):
                             "updated_at": "2026-01-01T00:00:00Z",
                             "organization_id": ORGANIZATION_ID,
                             "project_id": PROJECT_ID,
-                            "context_request_id": KNOWLEDGE_REQUEST_ID,
+                            "knowledge_request_id": KNOWLEDGE_REQUEST_ID,
                             "type": "text",
                             "title": "Deployment process",
                             "content_md": "Use the release checklist.",
@@ -88,7 +88,7 @@ class ValmarTest(unittest.TestCase):
                 return httpx.Response(
                     200,
                     json={
-                        "context_request_id": KNOWLEDGE_REQUEST_ID,
+                        "knowledge_request_id": KNOWLEDGE_REQUEST_ID,
                         "status": "pending",
                         "resource_uri": f"valmar://knowledge-requests/{KNOWLEDGE_REQUEST_ID}",
                         "message": "Request submitted.",
@@ -122,14 +122,14 @@ class ValmarTest(unittest.TestCase):
         self.assertEqual(
             paths,
             [
-                "/api/context/requests",
-                f"/api/context/requests/{KNOWLEDGE_REQUEST_ID}",
+                "/api/knowledge/requests",
+                f"/api/knowledge/requests/{KNOWLEDGE_REQUEST_ID}",
             ],
         )
 
     def test_list_knowledge_requests_and_import_people(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
-            if request.url.path.endswith("/context-requests"):
+            if request.url.path.endswith("/knowledge-requests"):
                 return httpx.Response(
                     200,
                     json=[
@@ -147,7 +147,7 @@ class ValmarTest(unittest.TestCase):
                 )
 
             body = json.loads(request.content)
-            self.assertEqual(body["members"][0]["display_name"], "Ada Lovelace")
+            self.assertEqual(body["people"][0]["display_name"], "Ada Lovelace")
             return httpx.Response(
                 200,
                 json={

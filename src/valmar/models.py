@@ -49,8 +49,8 @@ class KnowledgeItemProvenance(ValmarModel):
     source_agent_run_id: UUID | None = None
     source_knowledge_request_id: UUID | None = Field(
         default=None,
-        validation_alias="source_context_request_id",
-        serialization_alias="source_context_request_id",
+        validation_alias="source_knowledge_request_id",
+        serialization_alias="source_knowledge_request_id",
     )
     source_message_id: UUID | None = None
 
@@ -60,8 +60,8 @@ class KnowledgeRequestAnswer(ValmarModel):
     answer_text: str
     answer_knowledge_items: list[UUID] = Field(
         default_factory=list,
-        validation_alias="answer_context_parts",
-        serialization_alias="answer_context_parts",
+        validation_alias="answer_knowledge_items",
+        serialization_alias="answer_knowledge_items",
     )
 
 
@@ -73,8 +73,8 @@ class KnowledgeItem(ValmarModel):
     project_id: UUID
     knowledge_request_id: UUID | None = Field(
         default=None,
-        validation_alias="context_request_id",
-        serialization_alias="context_request_id",
+        validation_alias="knowledge_request_id",
+        serialization_alias="knowledge_request_id",
     )
     type: KnowledgeItemType
     title: str
@@ -126,8 +126,8 @@ class KnowledgeRequestListItem(ValmarModel):
 
 class KnowledgeRequestHandle(ValmarModel):
     knowledge_request_id: UUID = Field(
-        validation_alias="context_request_id",
-        serialization_alias="context_request_id",
+        validation_alias="knowledge_request_id",
+        serialization_alias="knowledge_request_id",
     )
     status: KnowledgeRequestStatus
     resource_uri: str
@@ -173,7 +173,7 @@ class CreatePersonInput(ValmarModel):
 
 
 class ImportPeopleInput(ValmarModel):
-    members: list[CreatePersonInput]
+    people: list[CreatePersonInput]
 
 
 class ImportPersonResult(ValmarModel):
