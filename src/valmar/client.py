@@ -95,6 +95,8 @@ class ContextNamespace(_Namespace):
         """Search existing context parts (POST /api/context/search)."""
         if self._organization_id is None:
             raise ValueError("organization_id must be set on the client to search context.")
+        if self._project_id is None:
+            raise ValueError("project_id must be set on the client to search context.")
         payload = SearchContextInput(
             organization_id=self._organization_id,
             project_id=self._project_id,
@@ -129,6 +131,8 @@ class KnowledgeNamespace(_Namespace):
         """
         if self._organization_id is None:
             raise ValueError("organization_id must be set on the client to search knowledge.")
+        if self._project_id is None:
+            raise ValueError("project_id must be set on the client to search knowledge.")
         payload = SearchContextInput(
             organization_id=self._organization_id,
             project_id=self._project_id,
@@ -174,6 +178,8 @@ class PeopleNamespace(_Namespace):
         """
         if self._organization_id is None:
             raise ValueError("organization_id must be set on the client to find experts.")
+        if self._project_id is None:
+            raise ValueError("project_id must be set on the client to find experts.")
         payload = SearchContextInput(
             organization_id=self._organization_id,
             project_id=self._project_id,

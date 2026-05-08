@@ -152,7 +152,7 @@ class CreateContextRequestInput(BaseModel):
 
 class SearchContextInput(BaseModel):
     organization_id: UUID
-    project_id: UUID | None = None
+    project_id: UUID
     query: str = ""
     types: list[ContextPartType] = Field(default_factory=list)
     related_member_ids: list[UUID] = Field(default_factory=list)

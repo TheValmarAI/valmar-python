@@ -24,7 +24,7 @@ client = ValmarClient(
 
 ### Search context
 
-Find relevant context across your organization's knowledge base.
+Find relevant context across the configured project's knowledge base.
 
 ```python
 results = client.context.search("deployment process")
@@ -78,7 +78,11 @@ for member in members:
 The client can be used as a context manager to ensure the HTTP connection is properly closed.
 
 ```python
-with ValmarClient(api_key="valmr_proj_sk_...") as client:
+with ValmarClient(
+    api_key="valmr_proj_sk_...",
+    organization_id="your-org-id",
+    project_id="your-project-id",
+) as client:
     results = client.context.search("onboarding process")
 ```
 
