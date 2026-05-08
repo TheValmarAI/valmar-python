@@ -131,6 +131,7 @@ class KnowledgeRequestHandle(ValmarModel):
     )
     status: KnowledgeRequestStatus
     resource_uri: str
+    message: str
 
 
 class Person(ValmarModel):

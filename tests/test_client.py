@@ -91,6 +91,7 @@ class ValmarTest(unittest.TestCase):
                         "context_request_id": KNOWLEDGE_REQUEST_ID,
                         "status": "pending",
                         "resource_uri": f"valmar://knowledge-requests/{KNOWLEDGE_REQUEST_ID}",
+                        "message": "Request submitted.",
                     },
                 )
             return httpx.Response(
