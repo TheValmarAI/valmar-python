@@ -3,14 +3,14 @@
 Provides a ready-made tool function that AI agents can call to retrieve
 organizational context via the Valmar API.  Install with::
 
-    pip install valmar[ai]
+    uv add "valmar[ai]"
 
 Usage with pydantic-ai::
 
     from pydantic_ai import Agent
-    from valmar.tools import valmar_context_tool
+    from valmar.tools import valmar_knowledge_tool
 
-    tool = valmar_context_tool(
+    tool = valmar_knowledge_tool(
         api_key="valmr_proj_sk_...",
         organization_id="...",
         project_id="...",
@@ -24,10 +24,10 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from valmar.client import ValmarClient
+from valmar.client import Valmar
 
 
-def valmar_context_tool(
+def valmar_knowledge_tool(
     api_key: str,
     *,
     base_url: str = "https://api.valmar.dev",
@@ -36,11 +36,10 @@ def valmar_context_tool(
     requesting_application: str = "pydantic-ai-agent",
     search_threshold: int = 3,
 ) -> Any:
-    """Return a Pydantic AI tool function for retrieving Valmar context.
+    """Return a Pydantic AI tool function for retrieving Valmar knowledge.
 
-    The tool first searches existing knowledge. If fewer than
-    ``search_threshold`` results are found, it falls back to creating a
-    context-gathering request.
+    The tool first searches existing knowledge. If fewer than ``search_threshold``
+    results are found, it falls back to creating a knowledge request.
 
     Parameters
     ----------
@@ -67,21 +66,21 @@ def valmar_context_tool(
     except ImportError as exc:
         raise ImportError(
             "pydantic-ai is required for tool integration. "
-            "Install it with: pip install valmar[ai]"
+            'Install it with: uv add "valmar[ai]"'
         ) from exc
 
-    client = ValmarClient(
+    client = Valmar(
         api_key=api_key,
         base_url=base_url,
         organization_id=organization_id,
         project_id=project_id,
     )
 
-    async def get_valmar_context(question: str) -> str:
-        """Search Valmar's knowledge base for organizational context.
+    async def search_valmar_knowledge(question: str) -> str:
+        """Search Valmar knowledge for an existing answer.
 
-        If insufficient results are found, a context-gathering request is
-        created to collect the information from team members.
+        If insufficient results are found, a knowledge request is created to
+        collect the information from team members.
 
         Args:
             question: The question or topic to look up in the knowledge base.
@@ -97,7 +96,7 @@ def valmar_context_tool(
 
         # Step 2: fall back to context gather if project_id is available
         if client.project_id is not None:
-            handle = client.context.gather(
+            handle = client.knowledge_requests.create(
                 question,
                 requesting_application=requesting_application,
             )
@@ -109,8 +108,8 @@ def valmar_context_tool(
 
             return (
                 f"{existing}"
-                f"A context-gathering request has been created "
-                f"(ID: {handle.context_request_id}, status: {handle.status}). "
+                f"A knowledge request has been created "
+                f"(ID: {handle.knowledge_request_id}, status: {handle.status}). "
                 f"Valmar will reach out to team members to collect this information. "
                 f"You can check the status later with the request ID."
             )
@@ -124,4 +123,4 @@ def valmar_context_tool(
 
         return "No relevant context found in the knowledge base."
 
-    return Tool(get_valmar_context, name="valmar_context")
+    return Tool(search_valmar_knowledge, name="valmar_knowledge")

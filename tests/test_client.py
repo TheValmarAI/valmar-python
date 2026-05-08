@@ -1,0 +1,177 @@
+from __future__ import annotations
+
+import json
+import unittest
+from uuid import UUID
+
+import httpx
+
+from valmar import CreatePersonInput, Valmar
+
+ORGANIZATION_ID = "11111111-1111-4111-8111-111111111111"
+PROJECT_ID = "22222222-2222-4222-8222-222222222222"
+KNOWLEDGE_REQUEST_ID = "33333333-3333-4333-8333-333333333333"
+KNOWLEDGE_ITEM_ID = "44444444-4444-4444-8444-444444444444"
+
+
+def build_client(handler: httpx.MockTransport) -> Valmar:
+    client = Valmar(
+        api_key="valmr_proj_sk_test",
+        base_url="https://api.example.test",
+        organization_id=ORGANIZATION_ID,
+        project_id=PROJECT_ID,
+    )
+    client._http.close()
+    client._http = httpx.Client(base_url=client.base_url, transport=handler)
+    return client
+
+
+class ValmarTest(unittest.TestCase):
+    def test_search_knowledge_sends_project_scope_and_parses_items(self) -> None:
+        seen_body: dict[str, object] = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            self.assertEqual(request.method, "POST")
+            self.assertEqual(request.url.path, "/api/context/search")
+            seen_body.update(json.loads(request.content))
+            return httpx.Response(
+                200,
+                json={
+                    "items": [
+                        {
+                            "id": KNOWLEDGE_ITEM_ID,
+                            "created_at": "2026-01-01T00:00:00Z",
+                            "updated_at": "2026-01-01T00:00:00Z",
+                            "organization_id": ORGANIZATION_ID,
+                            "project_id": PROJECT_ID,
+                            "context_request_id": KNOWLEDGE_REQUEST_ID,
+                            "type": "text",
+                            "title": "Deployment process",
+                            "content_md": "Use the release checklist.",
+                            "provenance": {},
+                            "confidence": 0.8,
+                            "review_status": "auto_accepted",
+                            "related_member_ids": [],
+                            "related_twin_node_ids": [],
+                            "tags": ["runbook"],
+                        }
+                    ],
+                    "total_count": 1,
+                },
+            )
+
+        client = build_client(httpx.MockTransport(handler))
+        result = client.knowledge.search("deployment", limit=3)
+
+        self.assertEqual(
+            seen_body,
+            {
+                "organization_id": ORGANIZATION_ID,
+                "project_id": PROJECT_ID,
+                "query": "deployment",
+                "types": [],
+                "related_member_ids": [],
+                "limit": 3,
+            },
+        )
+        self.assertEqual(result.items[0].knowledge_request_id, UUID(KNOWLEDGE_REQUEST_ID))
+
+    def test_create_and_get_knowledge_request_use_new_names(self) -> None:
+        paths: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            paths.append(request.url.path)
+            if request.method == "POST":
+                body = json.loads(request.content)
+                self.assertEqual(body["project_id"], PROJECT_ID)
+                self.assertEqual(body["requesting_application"], "test-agent")
+                return httpx.Response(
+                    200,
+                    json={
+                        "context_request_id": KNOWLEDGE_REQUEST_ID,
+                        "status": "pending",
+                        "resource_uri": f"valmar://knowledge-requests/{KNOWLEDGE_REQUEST_ID}",
+                    },
+                )
+            return httpx.Response(
+                200,
+                json={
+                    "id": KNOWLEDGE_REQUEST_ID,
+                    "created_at": "2026-01-01T00:00:00Z",
+                    "updated_at": "2026-01-01T00:00:00Z",
+                    "organization_id": ORGANIZATION_ID,
+                    "project_id": PROJECT_ID,
+                    "requesting_application": "test-agent",
+                    "question": "How do releases work?",
+                    "status": "completed",
+                    "result_summary": "Use the checklist.",
+                    "created_by_actor_id": "machine:test",
+                },
+            )
+
+        client = build_client(httpx.MockTransport(handler))
+        handle = client.knowledge_requests.create(
+            "How do releases work?",
+            requesting_application="test-agent",
+        )
+        request = client.knowledge_requests.get(handle.knowledge_request_id)
+
+        self.assertEqual(handle.knowledge_request_id, UUID(KNOWLEDGE_REQUEST_ID))
+        self.assertEqual(request.result_summary, "Use the checklist.")
+        self.assertEqual(
+            paths,
+            [
+                "/api/context/requests",
+                f"/api/context/requests/{KNOWLEDGE_REQUEST_ID}",
+            ],
+        )
+
+    def test_list_knowledge_requests_and_import_people(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path.endswith("/context-requests"):
+                return httpx.Response(
+                    200,
+                    json=[
+                        {
+                            "id": KNOWLEDGE_REQUEST_ID,
+                            "project_id": PROJECT_ID,
+                            "requesting_application": "admin-ui",
+                            "question": "Where is the policy?",
+                            "status": "pending",
+                            "created_at": "2026-01-01T00:00:00Z",
+                            "assigned_member_id": None,
+                            "assigned_member_display_name": None,
+                        }
+                    ],
+                )
+
+            body = json.loads(request.content)
+            self.assertEqual(body["members"][0]["display_name"], "Ada Lovelace")
+            return httpx.Response(
+                200,
+                json={
+                    "created": [
+                        {
+                            "email": "ada@example.com",
+                            "status": "created",
+                            "member_id": "55555555-5555-4555-8555-555555555555",
+                        }
+                    ],
+                    "skipped": [],
+                    "errors": [],
+                },
+            )
+
+        client = build_client(httpx.MockTransport(handler))
+
+        requests = client.knowledge_requests.list()
+        result = client.people.import_bulk(
+            [CreatePersonInput(email="ada@example.com", display_name="Ada Lovelace")]
+        )
+
+        self.assertEqual(requests[0].question, "Where is the policy?")
+        self.assertEqual(result.created[0].email, "ada@example.com")
+
+
+if __name__ == "__main__":
+    unittest.main()

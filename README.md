@@ -5,85 +5,79 @@ Python SDK for the Valmar platform.
 ## Installation
 
 ```bash
-pip install valmar
+uv add valmar
 ```
 
 ## Quick start
 
 ```python
-from valmar import ValmarClient
+from valmar import Valmar
 
-client = ValmarClient(
+client = Valmar(
     api_key="valmr_proj_sk_...",
     organization_id="your-org-id",
     project_id="your-project-id",
 )
 ```
 
-## Examples
+## Search knowledge
 
-### Search context
-
-Find relevant context across the configured project's knowledge base.
+Find relevant saved knowledge across the configured project.
 
 ```python
-results = client.context.search("deployment process")
+results = client.knowledge.search("deployment process")
 
 for item in results.items:
     print(f"{item.title} ({item.confidence})")
     print(item.content_md)
 ```
 
-### Gather context
+## Create a knowledge request
 
-Create a context request that gets routed to the right people in your org.
+Create a knowledge request that gets routed to the right people in your organization.
 
 ```python
-handle = client.context.gather(
+handle = client.knowledge_requests.create(
     "How do we handle database migrations in production?",
     background_context="Planning a schema change for the orders table",
 )
 
-print(f"Request created: {handle.context_request_id}")
+print(f"Request created: {handle.knowledge_request_id}")
 print(f"Status: {handle.status}")
 
-# Poll for the result later
-request = client.context.get(handle.context_request_id)
+request = client.knowledge_requests.get(handle.knowledge_request_id)
 if request.status == "completed":
     print(request.result_summary)
 ```
 
-### Find experts
-
-Discover who in your org knows about a given topic.
+## List and import people
 
 ```python
-expert_parts = client.people.find_experts("Kubernetes")
+from valmar import CreatePersonInput
 
-for part in expert_parts:
-    print(f"{part.title} — mentioned members: {part.related_member_ids}")
-```
+people = client.people.list()
 
-### List members
-
-```python
-members = client.members.list()
-
-for member in members:
-    print(f"{member.display_name} <{member.email}>")
+result = client.people.import_bulk(
+    [
+        CreatePersonInput(
+            email="ada@example.com",
+            display_name="Ada Lovelace",
+            timezone="UTC",
+            title="Principal Engineer",
+        )
+    ]
+)
 ```
 
 ## Context manager
 
-The client can be used as a context manager to ensure the HTTP connection is properly closed.
-
 ```python
-with ValmarClient(
+with Valmar(
     api_key="valmr_proj_sk_...",
     organization_id="your-org-id",
     project_id="your-project-id",
 ) as client:
-    results = client.context.search("onboarding process")
+    results = client.knowledge.search("onboarding process")
 ```
 
 ## Error handling
@@ -94,7 +88,7 @@ The SDK raises `httpx.HTTPStatusError` for non-2xx responses.
 import httpx
 
 try:
-    client.context.search("test")
+    client.knowledge.search("test")
 except httpx.HTTPStatusError as e:
     print(f"API error {e.response.status_code}: {e.response.text}")
 ```
