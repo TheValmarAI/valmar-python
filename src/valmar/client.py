@@ -21,7 +21,6 @@ from valmar.models import (
     SearchKnowledgeInput,
 )
 
-DEFAULT_BASE_URL = "https://api.valmar.dev"
 DEFAULT_TIMEOUT = 30.0
 
 
@@ -143,7 +142,7 @@ class Valmar:
         self,
         api_key: str,
         *,
-        base_url: str = DEFAULT_BASE_URL,
+        base_url: str,
         organization_id: UUID | str | None = None,
         project_id: UUID | str | None = None,
         timeout: float = DEFAULT_TIMEOUT,

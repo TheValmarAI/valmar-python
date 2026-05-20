@@ -2,6 +2,12 @@
 
 Python SDK for the Valmar platform.
 
+Documentation: https://docs.getvalmar.com
+
+Source: https://github.com/TheValmarAI/valmar-python
+
+License: Apache-2.0
+
 ## Installation
 
 ```bash
@@ -15,10 +21,13 @@ from valmar import Valmar
 
 client = Valmar(
     api_key="valmr_proj_sk_...",
+    base_url="https://your-valmar-deployment.example.com",
     organization_id="your-org-id",
     project_id="your-project-id",
 )
 ```
+
+`base_url` is required because Valmar is deployed per customer. Use the base URL for your own Valmar deployment.
 
 ## Search knowledge
 
@@ -74,6 +83,7 @@ result = client.people.import_bulk(
 ```python
 with Valmar(
     api_key="valmr_proj_sk_...",
+    base_url="https://your-valmar-deployment.example.com",
     organization_id="your-org-id",
     project_id="your-project-id",
 ) as client:

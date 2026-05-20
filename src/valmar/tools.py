@@ -12,6 +12,7 @@ Usage with pydantic-ai::
 
     tool = valmar_knowledge_tool(
         api_key="valmr_proj_sk_...",
+        base_url="https://your-valmar-deployment.example.com",
         organization_id="...",
         project_id="...",
     )
@@ -30,7 +31,7 @@ from valmar.client import Valmar
 def valmar_knowledge_tool(
     api_key: str,
     *,
-    base_url: str = "https://api.valmar.dev",
+    base_url: str,
     organization_id: UUID | str | None = None,
     project_id: UUID | str | None = None,
     requesting_application: str = "pydantic-ai-agent",
