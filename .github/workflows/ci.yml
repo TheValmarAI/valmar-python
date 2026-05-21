@@ -44,6 +44,8 @@ jobs:
           )
 
           for archive in sorted(pathlib.Path("dist").iterdir()):
+              if archive.name.startswith("."):
+                  continue
               if archive.suffix == ".whl":
                   with zipfile.ZipFile(archive) as zf:
                       names = zf.namelist()
