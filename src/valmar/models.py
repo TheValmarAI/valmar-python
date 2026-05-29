@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -14,6 +15,19 @@ class ValmarModel(BaseModel):
 
 
 class KnowledgeRequestStatus(StrEnum):
+    PENDING = "pending"
+    UNASSIGNED = "unassigned"
+    DEFERRED = "deferred"
+    WAITING_FOR_REPLY = "waiting_for_reply"
+    AWAITING_SYNTHESIS = "awaiting_synthesis"
+    AWAITING_REVIEW = "awaiting_review"
+    COMPLETED = "completed"
+    REJECTED = "rejected"
+    TIMED_OUT = "timed_out"
+    FAILED = "failed"
+
+
+class KnowledgeRequestAssignmentStatus(StrEnum):
     PENDING = "pending"
     DEFERRED = "deferred"
     WAITING_FOR_REPLY = "waiting_for_reply"
@@ -35,6 +49,7 @@ class KnowledgeItemType(StrEnum):
 class ReviewStatus(StrEnum):
     AUTO_ACCEPTED = "auto_accepted"
     NEEDS_REVIEW = "needs_review"
+    IGNORED = "ignored"
 
 
 class ProjectRole(StrEnum):
@@ -55,6 +70,20 @@ class KnowledgeItemProvenance(ValmarModel):
     source_message_id: UUID | None = None
 
 
+class KnowledgeRequestConsistencyConflict(ValmarModel):
+    topic: str
+    severity: Literal["low", "medium", "high"]
+    summary: str
+    assignment_ids: list[UUID] = Field(default_factory=list)
+    source_responses: list[str] = Field(default_factory=list)
+
+
+class KnowledgeRequestConsistencyReview(ValmarModel):
+    status: Literal["consistent", "partially_conflicting", "conflicting"]
+    summary: str
+    conflicts: list[KnowledgeRequestConsistencyConflict] = Field(default_factory=list)
+
+
 class KnowledgeRequestAnswer(ValmarModel):
     status: KnowledgeRequestResolutionStatus
     answer_text: str
@@ -63,6 +92,7 @@ class KnowledgeRequestAnswer(ValmarModel):
         validation_alias="answer_knowledge_items",
         serialization_alias="answer_knowledge_items",
     )
+    consistency_review: KnowledgeRequestConsistencyReview | None = None
 
 
 class KnowledgeItem(ValmarModel):
@@ -76,6 +106,7 @@ class KnowledgeItem(ValmarModel):
         validation_alias="knowledge_request_id",
         serialization_alias="knowledge_request_id",
     )
+    knowledge_request_assignment_id: UUID | None = None
     type: KnowledgeItemType
     title: str
     content_md: str
@@ -90,6 +121,12 @@ class KnowledgeItem(ValmarModel):
 class KnowledgeSearchResult(ValmarModel):
     items: list[KnowledgeItem] = Field(default_factory=list)
     total_count: int = 0
+
+
+class KnowledgeRequestAssignedMember(ValmarModel):
+    member_id: UUID
+    display_name: str
+    status: KnowledgeRequestAssignmentStatus
 
 
 class KnowledgeRequest(ValmarModel):
@@ -108,8 +145,30 @@ class KnowledgeRequest(ValmarModel):
     response_deadline_at: datetime | None = None
     result_summary: str | None = None
     answer: KnowledgeRequestAnswer | None = None
+    consistency_review: KnowledgeRequestConsistencyReview | None = None
     resolved_thread_id: UUID | None = None
     created_by_actor_id: str | None = None
+    assigned_members: list[KnowledgeRequestAssignedMember] = Field(default_factory=list)
+
+
+class KnowledgeRequestAssignment(ValmarModel):
+    id: UUID
+    knowledge_request_id: UUID
+    member_id: UUID
+    member_display_name: str
+    member_title: str | None = None
+    reason: str = ""
+    score: float = 0.5
+    evidence: list[dict] = Field(default_factory=list)
+    status: KnowledgeRequestAssignmentStatus
+    agent_run_id: UUID | None = None
+    conversation_thread_id: UUID | None = None
+    answer: KnowledgeRequestAnswer | None = None
+    result_summary: str | None = None
+    excluded_from_synthesis: bool = False
+    synthesis_exclusion_reason: str | None = None
+    completed_at: datetime | None = None
+    created_at: datetime
 
 
 class KnowledgeRequestListItem(ValmarModel):
@@ -120,8 +179,7 @@ class KnowledgeRequestListItem(ValmarModel):
     status: KnowledgeRequestStatus
     result_summary: str | None = None
     created_at: datetime
-    assigned_member_id: UUID | None = None
-    assigned_member_display_name: str | None = None
+    assigned_members: list[KnowledgeRequestAssignedMember] = Field(default_factory=list)
 
 
 class KnowledgeRequestHandle(ValmarModel):

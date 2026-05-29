@@ -12,6 +12,7 @@ ORGANIZATION_ID = "11111111-1111-4111-8111-111111111111"
 PROJECT_ID = "22222222-2222-4222-8222-222222222222"
 KNOWLEDGE_REQUEST_ID = "33333333-3333-4333-8333-333333333333"
 KNOWLEDGE_ITEM_ID = "44444444-4444-4444-8444-444444444444"
+MEMBER_ID = "55555555-5555-4555-8555-555555555555"
 
 
 def build_client(handler: httpx.MockTransport) -> Valmar:
@@ -140,8 +141,7 @@ class ValmarTest(unittest.TestCase):
                             "question": "Where is the policy?",
                             "status": "pending",
                             "created_at": "2026-01-01T00:00:00Z",
-                            "assigned_member_id": None,
-                            "assigned_member_display_name": None,
+                            "assigned_members": [],
                         }
                     ],
                 )
@@ -172,6 +172,56 @@ class ValmarTest(unittest.TestCase):
 
         self.assertEqual(requests[0].question, "Where is the policy?")
         self.assertEqual(result.created[0].email, "ada@example.com")
+
+    def test_manually_assign_knowledge_request(self) -> None:
+        seen_body: dict[str, object] = {}
+        seen_path = ""
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            nonlocal seen_path
+            seen_path = request.url.path
+            seen_body.update(json.loads(request.content))
+            return httpx.Response(
+                200,
+                json={
+                    "id": "66666666-6666-4666-8666-666666666666",
+                    "knowledge_request_id": KNOWLEDGE_REQUEST_ID,
+                    "member_id": MEMBER_ID,
+                    "member_display_name": "Ada Lovelace",
+                    "member_title": "Platform Expert",
+                    "reason": "Manual assignment.",
+                    "score": 0.5,
+                    "evidence": [],
+                    "status": "pending",
+                    "agent_run_id": None,
+                    "conversation_thread_id": None,
+                    "answer": None,
+                    "result_summary": None,
+                    "completed_at": None,
+                    "created_at": "2026-01-01T00:00:00Z",
+                },
+            )
+
+        client = build_client(httpx.MockTransport(handler))
+        assignment = client.knowledge_requests.assign(
+            KNOWLEDGE_REQUEST_ID,
+            member_id=MEMBER_ID,
+            reason="Manual assignment.",
+        )
+
+        self.assertEqual(
+            seen_path,
+            f"/api/knowledge/requests/{KNOWLEDGE_REQUEST_ID}/assignments",
+        )
+        self.assertEqual(
+            seen_body,
+            {
+                "member_id": MEMBER_ID,
+                "reason": "Manual assignment.",
+            },
+        )
+        self.assertEqual(assignment.member_id, UUID(MEMBER_ID))
+        self.assertEqual(assignment.status, "pending")
 
 
 if __name__ == "__main__":
