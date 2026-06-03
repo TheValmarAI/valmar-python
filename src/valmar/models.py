@@ -95,6 +95,16 @@ class KnowledgeRequestAnswer(ValmarModel):
     consistency_review: KnowledgeRequestConsistencyReview | None = None
 
 
+class KnowledgeRequestFilterDecision(ValmarModel):
+    decision: Literal["approved", "rejected"]
+    reason: str
+    matching_knowledge_request_ids: list[UUID] = Field(
+        default_factory=list,
+        validation_alias="matching_knowledge_request_ids",
+        serialization_alias="matching_knowledge_request_ids",
+    )
+
+
 class KnowledgeItem(ValmarModel):
     id: UUID
     created_at: datetime
@@ -146,6 +156,7 @@ class KnowledgeRequest(ValmarModel):
     result_summary: str | None = None
     answer: KnowledgeRequestAnswer | None = None
     consistency_review: KnowledgeRequestConsistencyReview | None = None
+    filter_decision: KnowledgeRequestFilterDecision | None = None
     resolved_thread_id: UUID | None = None
     created_by_actor_id: str | None = None
     assigned_members: list[KnowledgeRequestAssignedMember] = Field(default_factory=list)
@@ -178,6 +189,7 @@ class KnowledgeRequestListItem(ValmarModel):
     question: str
     status: KnowledgeRequestStatus
     result_summary: str | None = None
+    filter_decision: KnowledgeRequestFilterDecision | None = None
     created_at: datetime
     assigned_members: list[KnowledgeRequestAssignedMember] = Field(default_factory=list)
 
@@ -190,6 +202,7 @@ class KnowledgeRequestHandle(ValmarModel):
     status: KnowledgeRequestStatus
     resource_uri: str
     message: str
+    filter_decision: KnowledgeRequestFilterDecision | None = None
 
 
 class Person(ValmarModel):
