@@ -61,7 +61,7 @@ class KnowledgeResource(_Resource):
         *,
         limit: int = 10,
         types: list[KnowledgeItemType | str] | None = None,
-        related_member_ids: list[UUID | str] | None = None,
+        source_member_ids: list[UUID | str] | None = None,
     ) -> KnowledgeSearchResult:
         payload = SearchKnowledgeInput(
             organization_id=self._require_organization_id(),
@@ -69,7 +69,7 @@ class KnowledgeResource(_Resource):
             query=query,
             limit=limit,
             types=[KnowledgeItemType(item) for item in (types or [])],
-            related_member_ids=[UUID(str(item)) for item in (related_member_ids or [])],
+            source_member_ids=[UUID(str(item)) for item in (source_member_ids or [])],
         )
         response = self._http.post("/api/knowledge/search", json=payload.model_dump(mode="json"))
         response.raise_for_status()
@@ -144,57 +144,6 @@ class KnowledgeRequestsResource(_Resource):
         )
         response.raise_for_status()
         return KnowledgeRequestAssignment.model_validate(response.json())
-
-    def synthesize(
-        self,
-        knowledge_request_id: UUID | str,
-        *,
-        assignment_ids: list[UUID | str] | None = None,
-    ) -> KnowledgeRequest:
-        payload = {
-            "assignment_ids": [
-                str(assignment_id) for assignment_id in assignment_ids
-            ] if assignment_ids is not None else None
-        }
-        response = self._http.post(
-            f"/api/knowledge/requests/{knowledge_request_id}/synthesis",
-            json=payload,
-        )
-        response.raise_for_status()
-        return KnowledgeRequest.model_validate(response.json())
-
-    def ignore_synthesis(self, knowledge_request_id: UUID | str) -> KnowledgeRequest:
-        response = self._http.post(
-            f"/api/knowledge/requests/{knowledge_request_id}/synthesis/ignore",
-        )
-        response.raise_for_status()
-        return KnowledgeRequest.model_validate(response.json())
-
-    def exclude_assignment_from_synthesis(
-        self,
-        knowledge_request_id: UUID | str,
-        assignment_id: UUID | str,
-        *,
-        reason: str | None = None,
-    ) -> KnowledgeRequest:
-        response = self._http.post(
-            f"/api/knowledge/requests/{knowledge_request_id}/assignments/{assignment_id}/exclude",
-            json={"reason": reason},
-        )
-        response.raise_for_status()
-        return KnowledgeRequest.model_validate(response.json())
-
-    def include_assignment_in_synthesis(
-        self,
-        knowledge_request_id: UUID | str,
-        assignment_id: UUID | str,
-    ) -> KnowledgeRequest:
-        response = self._http.post(
-            f"/api/knowledge/requests/{knowledge_request_id}/assignments/{assignment_id}/include",
-        )
-        response.raise_for_status()
-        return KnowledgeRequest.model_validate(response.json())
-
 
 class PeopleResource(_Resource):
     """Manage organization people that Valmar may contact."""

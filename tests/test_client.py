@@ -49,11 +49,23 @@ class ValmarTest(unittest.TestCase):
                             "type": "text",
                             "title": "Deployment process",
                             "content_md": "Use the release checklist.",
+                            "metadata": {
+                                "expert_names": ["Employee One"],
+                                "chat_participants": [
+                                    {
+                                        "member_id": MEMBER_ID,
+                                        "display_name": "Employee One",
+                                        "email": "employee@example.test",
+                                        "title": "Ops Lead",
+                                    }
+                                ],
+                                "approved_at": "2026-01-02T00:00:00Z",
+                            },
                             "provenance": {},
+                            "source_thread_id": "66666666-6666-4666-8666-666666666666",
                             "confidence": 0.8,
                             "review_status": "auto_accepted",
-                            "related_member_ids": [],
-                            "related_twin_node_ids": [],
+                            "source_member_ids": [MEMBER_ID],
                             "tags": ["runbook"],
                         }
                     ],
@@ -71,11 +83,25 @@ class ValmarTest(unittest.TestCase):
                 "project_id": PROJECT_ID,
                 "query": "deployment",
                 "types": [],
-                "related_member_ids": [],
+                "source_member_ids": [],
                 "limit": 3,
             },
         )
         self.assertEqual(result.items[0].knowledge_request_id, UUID(KNOWLEDGE_REQUEST_ID))
+        self.assertIsNotNone(result.items[0].metadata)
+        assert result.items[0].metadata is not None
+        self.assertEqual(result.items[0].metadata.expert_names, ["Employee One"])
+        self.assertEqual(len(result.items[0].metadata.chat_participants), 1)
+        self.assertEqual(
+            result.items[0].metadata.chat_participants[0].member_id,
+            UUID(MEMBER_ID),
+        )
+        self.assertEqual(result.items[0].metadata.approved_at.year, 2026)
+        self.assertEqual(
+            result.items[0].source_thread_id,
+            UUID("66666666-6666-4666-8666-666666666666"),
+        )
+        self.assertEqual(result.items[0].source_member_ids, [UUID(MEMBER_ID)])
 
     def test_create_and_get_knowledge_request_use_new_names(self) -> None:
         paths: list[str] = []
@@ -107,6 +133,12 @@ class ValmarTest(unittest.TestCase):
                     "question": "How do releases work?",
                     "status": "completed",
                     "result_summary": "Use the checklist.",
+                    "answer": {
+                        "status": "resolved",
+                        "answer_text": "Use the checklist.",
+                        "answer_knowledge_items": [KNOWLEDGE_ITEM_ID],
+                        "source_member_ids": [MEMBER_ID],
+                    },
                     "created_by_actor_id": "machine:test",
                 },
             )
@@ -120,6 +152,9 @@ class ValmarTest(unittest.TestCase):
 
         self.assertEqual(handle.knowledge_request_id, UUID(KNOWLEDGE_REQUEST_ID))
         self.assertEqual(request.result_summary, "Use the checklist.")
+        self.assertIsNotNone(request.answer)
+        assert request.answer is not None
+        self.assertEqual(request.answer.source_member_ids, [UUID(MEMBER_ID)])
         self.assertEqual(
             paths,
             [
@@ -222,6 +257,13 @@ class ValmarTest(unittest.TestCase):
         )
         self.assertEqual(assignment.member_id, UUID(MEMBER_ID))
         self.assertEqual(assignment.status, "pending")
+
+    def test_removed_synthesis_helpers_are_not_exposed(self) -> None:
+        client = build_client(httpx.MockTransport(lambda _request: httpx.Response(200, json={})))
+
+        self.assertFalse(hasattr(client.knowledge_requests, "synthesize"))
+        self.assertFalse(hasattr(client.knowledge_requests, "ignore_synthesis"))
+        self.assertFalse(hasattr(client.knowledge_requests, "exclude_assignment_from_synthesis"))
 
 
 if __name__ == "__main__":

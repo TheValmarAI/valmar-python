@@ -38,6 +38,9 @@ results = client.knowledge.search("deployment process")
 
 for item in results.items:
     print(f"{item.title} ({item.confidence})")
+    if item.metadata:
+        print(f"Experts: {', '.join(item.metadata.expert_names)}")
+        print(f"Approved at: {item.metadata.approved_at}")
     print(item.content_md)
 ```
 

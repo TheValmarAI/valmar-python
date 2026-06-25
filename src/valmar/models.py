@@ -19,7 +19,6 @@ class KnowledgeRequestStatus(StrEnum):
     UNASSIGNED = "unassigned"
     DEFERRED = "deferred"
     WAITING_FOR_REPLY = "waiting_for_reply"
-    AWAITING_SYNTHESIS = "awaiting_synthesis"
     AWAITING_REVIEW = "awaiting_review"
     COMPLETED = "completed"
     REJECTED = "rejected"
@@ -59,29 +58,25 @@ class ProjectRole(StrEnum):
 
 
 class KnowledgeItemProvenance(ValmarModel):
-    source_thread_id: UUID | None = None
-    source_member_id: UUID | None = None
     source_agent_run_id: UUID | None = None
     source_knowledge_request_id: UUID | None = Field(
         default=None,
         validation_alias="source_knowledge_request_id",
         serialization_alias="source_knowledge_request_id",
     )
-    source_message_id: UUID | None = None
 
 
-class KnowledgeRequestConsistencyConflict(ValmarModel):
-    topic: str
-    severity: Literal["low", "medium", "high"]
-    summary: str
-    assignment_ids: list[UUID] = Field(default_factory=list)
-    source_responses: list[str] = Field(default_factory=list)
+class KnowledgeItemChatParticipant(ValmarModel):
+    member_id: UUID
+    display_name: str
+    email: str
+    title: str | None = None
 
 
-class KnowledgeRequestConsistencyReview(ValmarModel):
-    status: Literal["consistent", "partially_conflicting", "conflicting"]
-    summary: str
-    conflicts: list[KnowledgeRequestConsistencyConflict] = Field(default_factory=list)
+class KnowledgeItemMetadata(ValmarModel):
+    expert_names: list[str] = Field(default_factory=list)
+    chat_participants: list[KnowledgeItemChatParticipant] = Field(default_factory=list)
+    approved_at: datetime | None = None
 
 
 class KnowledgeRequestAnswer(ValmarModel):
@@ -92,7 +87,7 @@ class KnowledgeRequestAnswer(ValmarModel):
         validation_alias="answer_knowledge_items",
         serialization_alias="answer_knowledge_items",
     )
-    consistency_review: KnowledgeRequestConsistencyReview | None = None
+    source_member_ids: list[UUID] = Field(default_factory=list)
 
 
 class KnowledgeRequestFilterDecision(ValmarModel):
@@ -120,11 +115,12 @@ class KnowledgeItem(ValmarModel):
     type: KnowledgeItemType
     title: str
     content_md: str
+    metadata: KnowledgeItemMetadata | None = None
     provenance: KnowledgeItemProvenance
+    source_thread_id: UUID | None = None
     confidence: float = 0.65
     review_status: ReviewStatus = ReviewStatus.AUTO_ACCEPTED
-    related_member_ids: list[UUID] = Field(default_factory=list)
-    related_twin_node_ids: list[UUID] = Field(default_factory=list)
+    source_member_ids: list[UUID] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
 
 
@@ -155,7 +151,6 @@ class KnowledgeRequest(ValmarModel):
     response_deadline_at: datetime | None = None
     result_summary: str | None = None
     answer: KnowledgeRequestAnswer | None = None
-    consistency_review: KnowledgeRequestConsistencyReview | None = None
     filter_decision: KnowledgeRequestFilterDecision | None = None
     resolved_thread_id: UUID | None = None
     created_by_actor_id: str | None = None
@@ -176,8 +171,6 @@ class KnowledgeRequestAssignment(ValmarModel):
     conversation_thread_id: UUID | None = None
     answer: KnowledgeRequestAnswer | None = None
     result_summary: str | None = None
-    excluded_from_synthesis: bool = False
-    synthesis_exclusion_reason: str | None = None
     completed_at: datetime | None = None
     created_at: datetime
 
@@ -231,7 +224,7 @@ class SearchKnowledgeInput(ValmarModel):
     project_id: UUID
     query: str = ""
     types: list[KnowledgeItemType] = Field(default_factory=list)
-    related_member_ids: list[UUID] = Field(default_factory=list)
+    source_member_ids: list[UUID] = Field(default_factory=list)
     limit: int = Field(default=10, ge=1, le=100)
 
 
