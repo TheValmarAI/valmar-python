@@ -19,9 +19,10 @@ class KnowledgeRequestStatus(StrEnum):
     UNASSIGNED = "unassigned"
     DEFERRED = "deferred"
     WAITING_FOR_REPLY = "waiting_for_reply"
-    AWAITING_REVIEW = "awaiting_review"
+    WAITING_FOR_REVIEW = "waiting_for_review"
     COMPLETED = "completed"
-    REJECTED = "rejected"
+    FILTERED_OUT = "filtered_out"
+    DELETED = "deleted"
     TIMED_OUT = "timed_out"
     FAILED = "failed"
 
@@ -37,7 +38,6 @@ class KnowledgeRequestAssignmentStatus(StrEnum):
 
 class KnowledgeRequestResolutionStatus(StrEnum):
     RESOLVED = "resolved"
-    PARTIAL_RESOLUTION = "partial_resolution"
     NOT_RESOLVED = "not_resolved"
 
 
