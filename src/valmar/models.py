@@ -121,7 +121,6 @@ class KnowledgeItem(ValmarModel):
     confidence: float = 0.65
     review_status: ReviewStatus = ReviewStatus.AUTO_ACCEPTED
     source_member_ids: list[UUID] = Field(default_factory=list)
-    tags: list[str] = Field(default_factory=list)
 
 
 class KnowledgeSearchResult(ValmarModel):

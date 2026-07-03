@@ -66,7 +66,6 @@ class ValmarTest(unittest.TestCase):
                             "confidence": 0.8,
                             "review_status": "auto_accepted",
                             "source_member_ids": [MEMBER_ID],
-                            "tags": ["runbook"],
                         }
                     ],
                     "total_count": 1,
