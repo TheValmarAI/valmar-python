@@ -81,6 +81,19 @@ result = client.people.import_bulk(
 )
 ```
 
+## Run Knowledge Gap analysis
+
+Use the active connection configured by a project administrator.
+
+```python
+overview = client.knowledge_gaps.overview()
+run = client.knowledge_gaps.start_run(custom_instructions="Focus on incident workflows")
+
+# After the run completes:
+ranking = client.knowledge_gaps.get_run_artifact(run.run_id, "ranking.json")
+submissions = client.knowledge_gaps.submit_ranked_gaps(run.run_id, gap_ranks=[1, 2])
+```
+
 ## Context manager
 
 ```python

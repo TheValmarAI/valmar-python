@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -251,3 +251,104 @@ class ImportPeopleResult(ValmarModel):
     created: list[ImportPersonResult] = Field(default_factory=list)
     skipped: list[ImportPersonResult] = Field(default_factory=list)
     errors: list[ImportPersonResult] = Field(default_factory=list)
+
+
+class KnowledgeGapsPipelineRunInput(ValmarModel):
+    custom_instructions: str | None = None
+
+
+class KnowledgeGapsPipelineRunStatus(ValmarModel):
+    run_id: UUID
+    status: Literal["idle", "running", "completed", "failed"]
+    current_step: str | None = None
+    completed_steps: list[str] = Field(default_factory=list)
+    error: str | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+
+
+class KnowledgeGapsArtifactOverview(ValmarModel):
+    name: str
+    filename: str
+    exists: bool
+    updated_at: datetime | None = None
+    summary: list[str] = Field(default_factory=list)
+
+
+class KnowledgeGapsSubmission(ValmarModel):
+    gap_rank: int
+    gap_title: str
+    knowledge_request_id: UUID
+    submitted_at: datetime
+    submitted_by_actor_id: str | None = None
+
+
+class KnowledgeGapsDismissal(ValmarModel):
+    gap_rank: int
+    gap_title: str
+    reason: str | None = None
+    dismissed_at: datetime
+    dismissed_by_actor_id: str | None = None
+
+
+class KnowledgeGapsConnection(ValmarModel):
+    id: UUID
+    name: str
+    target_url: str | None = None
+    target_api_key_set: bool = False
+    chatbot_background_info: str | None = None
+    custom_instructions: str | None = None
+    target_message_field: str = "message"
+    target_response_field: str = "response"
+    target_supports_history: bool = False
+    target_history_field: str = "messages"
+    created_at: datetime
+    updated_at: datetime
+
+
+class KnowledgeGapsPipelineRunSummary(KnowledgeGapsPipelineRunStatus):
+    connection_id: UUID | None = None
+    connection_name: str | None = None
+    artifacts: list[KnowledgeGapsArtifactOverview] = Field(default_factory=list)
+    submissions: list[KnowledgeGapsSubmission] = Field(default_factory=list)
+    dismissals: list[KnowledgeGapsDismissal] = Field(default_factory=list)
+    ranked_gaps_count: int | None = None
+
+
+class KnowledgeGapsConfigFieldStatus(ValmarModel):
+    name: str
+    label: str
+    provided: bool
+    required_for: str
+
+
+class KnowledgeGapsConfigValues(ValmarModel):
+    target_url: str | None = None
+    target_api_key_set: bool = False
+    chatbot_background_info: str | None = None
+    custom_instructions: str | None = None
+    target_message_field: str = "message"
+    target_response_field: str = "response"
+    target_supports_history: bool = False
+    target_history_field: str = "messages"
+
+
+class KnowledgeGapsOverview(ValmarModel):
+    cli_command: str
+    output_dir: str
+    pipeline_ready: bool
+    submission_ready: bool
+    active_connection_id: UUID | None = None
+    saved_connections: list[KnowledgeGapsConnection] = Field(default_factory=list)
+    config_fields: list[KnowledgeGapsConfigFieldStatus] = Field(default_factory=list)
+    artifacts: list[KnowledgeGapsArtifactOverview] = Field(default_factory=list)
+    runs: list[KnowledgeGapsPipelineRunSummary] = Field(default_factory=list)
+    run_status: KnowledgeGapsPipelineRunStatus | None = None
+    config_values: KnowledgeGapsConfigValues | None = None
+
+
+class KnowledgeGapsSubmitResponse(ValmarModel):
+    submissions: list[KnowledgeGapsSubmission] = Field(default_factory=list)
+
+
+KnowledgeGapsArtifact = dict[str, Any]
