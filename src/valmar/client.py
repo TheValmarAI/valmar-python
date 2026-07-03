@@ -13,6 +13,12 @@ from valmar.models import (
     ImportPeopleInput,
     ImportPeopleResult,
     KnowledgeItemType,
+    KnowledgeGapsArtifact,
+    KnowledgeGapsOverview,
+    KnowledgeGapsPipelineRunInput,
+    KnowledgeGapsPipelineRunStatus,
+    KnowledgeGapsSubmission,
+    KnowledgeGapsSubmitResponse,
     KnowledgeRequest,
     KnowledgeRequestAssignment,
     KnowledgeRequestHandle,
@@ -163,6 +169,47 @@ class PeopleResource(_Resource):
         return ImportPeopleResult.model_validate(response.json())
 
 
+class KnowledgeGapsResource(_Resource):
+    """Run project-scoped proactive Knowledge Gap analysis."""
+
+    def _base_path(self) -> str:
+        return f"/api/projects/{self._require_project_id()}/knowledge-gaps"
+
+    def overview(self) -> KnowledgeGapsOverview:
+        response = self._http.get(f"{self._base_path()}/overview")
+        response.raise_for_status()
+        return KnowledgeGapsOverview.model_validate(response.json())
+
+    def start_run(
+        self, *, custom_instructions: str | None = None
+    ) -> KnowledgeGapsPipelineRunStatus:
+        payload = KnowledgeGapsPipelineRunInput(custom_instructions=custom_instructions)
+        response = self._http.post(
+            f"{self._base_path()}/run",
+            json=payload.model_dump(mode="json", exclude_none=True),
+        )
+        response.raise_for_status()
+        return KnowledgeGapsPipelineRunStatus.model_validate(response.json())
+
+    def get_run_artifact(self, run_id: UUID | str, name: str) -> KnowledgeGapsArtifact:
+        response = self._http.get(f"{self._base_path()}/runs/{run_id}/artifacts/{name}")
+        response.raise_for_status()
+        return response.json()
+
+    def submit_ranked_gaps(
+        self,
+        run_id: UUID | str,
+        *,
+        gap_ranks: list[int] | None = None,
+    ) -> list[KnowledgeGapsSubmission]:
+        response = self._http.post(
+            f"{self._base_path()}/runs/{run_id}/submit",
+            json={"gap_ranks": gap_ranks},
+        )
+        response.raise_for_status()
+        return KnowledgeGapsSubmitResponse.model_validate(response.json()).submissions
+
+
 class Valmar:
     """Small HTTP client for the Valmar REST API."""
 
@@ -185,7 +232,7 @@ class Valmar:
             headers={
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
-                "User-Agent": "valmar-sdk-python/0.1.0",
+                "User-Agent": "valmar-sdk-python/0.2.0",
             },
             timeout=timeout,
         )
@@ -193,6 +240,7 @@ class Valmar:
         self.knowledge = KnowledgeResource(self)
         self.knowledge_requests = KnowledgeRequestsResource(self)
         self.people = PeopleResource(self)
+        self.knowledge_gaps = KnowledgeGapsResource(self)
 
     def close(self) -> None:
         self._http.close()

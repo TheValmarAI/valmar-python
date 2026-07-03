@@ -13,6 +13,7 @@ PROJECT_ID = "22222222-2222-4222-8222-222222222222"
 KNOWLEDGE_REQUEST_ID = "33333333-3333-4333-8333-333333333333"
 KNOWLEDGE_ITEM_ID = "44444444-4444-4444-8444-444444444444"
 MEMBER_ID = "55555555-5555-4555-8555-555555555555"
+RUN_ID = "77777777-7777-4777-8777-777777777777"
 
 
 def build_client(handler: httpx.MockTransport) -> Valmar:
@@ -28,6 +29,73 @@ def build_client(handler: httpx.MockTransport) -> Valmar:
 
 
 class ValmarTest(unittest.TestCase):
+    def test_knowledge_gaps_workflow_uses_project_scoped_paths(self) -> None:
+        seen: list[tuple[str, str, object | None]] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content) if request.content else None
+            seen.append((request.method, request.url.path, body))
+            if request.url.path.endswith("/overview"):
+                return httpx.Response(
+                    200,
+                    json={
+                        "cli_command": "knowledge-gaps run",
+                        "output_dir": "postgres:knowledge_gaps_runs",
+                        "pipeline_ready": True,
+                        "submission_ready": True,
+                        "active_connection_id": None,
+                        "saved_connections": [],
+                        "config_fields": [],
+                        "artifacts": [],
+                        "runs": [],
+                        "run_status": None,
+                        "config_values": None,
+                    },
+                )
+            if request.url.path.endswith("/run"):
+                return httpx.Response(
+                    200,
+                    json={
+                        "run_id": RUN_ID,
+                        "status": "running",
+                        "completed_steps": [],
+                    },
+                )
+            if "/artifacts/" in request.url.path:
+                return httpx.Response(200, json={"ranked_gaps": []})
+            return httpx.Response(
+                200,
+                json={
+                    "submissions": [
+                        {
+                            "gap_rank": 1,
+                            "gap_title": "Missing rollback process",
+                            "knowledge_request_id": KNOWLEDGE_REQUEST_ID,
+                            "submitted_at": "2026-01-01T00:00:00Z",
+                        }
+                    ]
+                },
+            )
+
+        client = build_client(httpx.MockTransport(handler))
+        assert client.knowledge_gaps.overview().pipeline_ready is True
+        assert client.knowledge_gaps.start_run(custom_instructions="Focus on incidents").run_id == UUID(RUN_ID)
+        assert client.knowledge_gaps.get_run_artifact(RUN_ID, "ranking.json") == {
+            "ranked_gaps": []
+        }
+        submissions = client.knowledge_gaps.submit_ranked_gaps(RUN_ID, gap_ranks=[1])
+        assert submissions[0].knowledge_request_id == UUID(KNOWLEDGE_REQUEST_ID)
+        base = f"/api/projects/{PROJECT_ID}/knowledge-gaps"
+        self.assertEqual(
+            seen,
+            [
+                ("GET", f"{base}/overview", None),
+                ("POST", f"{base}/run", {"custom_instructions": "Focus on incidents"}),
+                ("GET", f"{base}/runs/{RUN_ID}/artifacts/ranking.json", None),
+                ("POST", f"{base}/runs/{RUN_ID}/submit", {"gap_ranks": [1]}),
+            ],
+        )
+
     def test_search_knowledge_sends_project_scope_and_parses_items(self) -> None:
         seen_body: dict[str, object] = {}
 
