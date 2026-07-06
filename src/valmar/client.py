@@ -8,24 +8,25 @@ from uuid import UUID
 import httpx
 
 from valmar.models import (
-    CreateKnowledgeRequestInput,
+    ContextReference,
+    ContextRequest,
+    ContextRequestAssignment,
+    ContextRequestHandle,
+    ContextRequestListItem,
+    ContextResource,
+    ContextSearchResult,
+    CreateContextRequestInput,
     CreatePersonInput,
     ImportPeopleInput,
     ImportPeopleResult,
-    KnowledgeItemType,
     KnowledgeGapsArtifact,
     KnowledgeGapsOverview,
     KnowledgeGapsPipelineRunInput,
     KnowledgeGapsPipelineRunStatus,
     KnowledgeGapsSubmission,
     KnowledgeGapsSubmitResponse,
-    KnowledgeRequest,
-    KnowledgeRequestAssignment,
-    KnowledgeRequestHandle,
-    KnowledgeRequestListItem,
-    KnowledgeSearchResult,
     Person,
-    SearchKnowledgeInput,
+    SearchContextInput,
 )
 
 DEFAULT_TIMEOUT = 30.0
@@ -58,32 +59,47 @@ class _Resource:
         return self._project_id
 
 
-class KnowledgeResource(_Resource):
-    """Search project-scoped knowledge saved by Valmar."""
+class ContextResourceClient(_Resource):
+    """Search and read project-scoped Context Hub resources."""
 
     def search(
         self,
         query: str = "",
         *,
         limit: int = 10,
-        types: list[KnowledgeItemType | str] | None = None,
+        modules: list[str] | None = None,
         source_member_ids: list[UUID | str] | None = None,
-    ) -> KnowledgeSearchResult:
-        payload = SearchKnowledgeInput(
+    ) -> ContextSearchResult:
+        payload = SearchContextInput(
             organization_id=self._require_organization_id(),
             project_id=self._require_project_id(),
             query=query,
             limit=limit,
-            types=[KnowledgeItemType(item) for item in (types or [])],
+            modules=modules or [],
             source_member_ids=[UUID(str(item)) for item in (source_member_ids or [])],
         )
-        response = self._http.post("/api/knowledge/search", json=payload.model_dump(mode="json"))
+        response = self._http.post("/api/context/search", json=payload.model_dump(mode="json"))
         response.raise_for_status()
-        return KnowledgeSearchResult.model_validate(response.json())
+        return ContextSearchResult.model_validate(response.json())
+
+    def read(self, reference: ContextReference | str) -> ContextResource:
+        uri = reference.uri if isinstance(reference, ContextReference) else reference
+        prefix = "valmar://context/"
+        if not uri.startswith(prefix):
+            raise ValueError("reference must be a valmar://context URI.")
+        parts = uri.removeprefix(prefix).split("/")
+        if len(parts) != 3:
+            raise ValueError("reference must include project, module, and resource identifiers.")
+        project_id, module, resource_id = parts
+        if UUID(project_id) != self._require_project_id():
+            raise ValueError("reference belongs to a different project.")
+        response = self._http.get(f"/api/context/resources/{module}/{resource_id}")
+        response.raise_for_status()
+        return ContextResource.model_validate(response.json())
 
 
-class KnowledgeRequestsResource(_Resource):
-    """Create and inspect human-routed knowledge requests."""
+class ContextRequestsResource(_Resource):
+    """Create and inspect human-routed context requests."""
 
     def create(
         self,
@@ -93,8 +109,8 @@ class KnowledgeRequestsResource(_Resource):
         background_context: str | None = None,
         requesting_application: str = "valmar-sdk-python",
         source_agent_config_id: UUID | str | None = None,
-    ) -> KnowledgeRequestHandle:
-        payload = CreateKnowledgeRequestInput(
+    ) -> ContextRequestHandle:
+        payload = CreateContextRequestInput(
             project_id=self._require_project_id(),
             requesting_application=requesting_application,
             question=question,
@@ -105,33 +121,34 @@ class KnowledgeRequestsResource(_Resource):
             ),
         )
         response = self._http.post(
-            "/api/knowledge/requests",
+            "/api/context/requests",
             json=payload.model_dump(mode="json"),
         )
         response.raise_for_status()
-        return KnowledgeRequestHandle.model_validate(response.json())
+        return ContextRequestHandle.model_validate(response.json())
 
-    def get(self, knowledge_request_id: UUID | str) -> KnowledgeRequest:
-        response = self._http.get(f"/api/knowledge/requests/{knowledge_request_id}")
+    def get(self, context_request_id: UUID | str) -> ContextRequest:
+        response = self._http.get(f"/api/context/requests/{context_request_id}")
         response.raise_for_status()
-        return KnowledgeRequest.model_validate(response.json())
+        return ContextRequest.model_validate(response.json())
 
-    def list(self) -> list[KnowledgeRequestListItem]:
+    def list(self) -> list[ContextRequestListItem]:
         response = self._http.get(
-            f"/api/projects/{self._require_project_id()}/knowledge-requests",
+            "/api/context/requests",
+            params={"project_id": str(self._require_project_id())},
         )
         response.raise_for_status()
-        return [KnowledgeRequestListItem.model_validate(item) for item in response.json()]
+        return [ContextRequestListItem.model_validate(item) for item in response.json()]
 
     def list_assignments(
         self,
         knowledge_request_id: UUID | str,
-    ) -> list[KnowledgeRequestAssignment]:
+    ) -> list[ContextRequestAssignment]:
         response = self._http.get(
-            f"/api/knowledge/requests/{knowledge_request_id}/assignments"
+            f"/api/context/requests/{knowledge_request_id}/assignments"
         )
         response.raise_for_status()
-        return [KnowledgeRequestAssignment.model_validate(item) for item in response.json()]
+        return [ContextRequestAssignment.model_validate(item) for item in response.json()]
 
     def assign(
         self,
@@ -139,17 +156,17 @@ class KnowledgeRequestsResource(_Resource):
         *,
         member_id: UUID | str,
         reason: str | None = None,
-    ) -> KnowledgeRequestAssignment:
+    ) -> ContextRequestAssignment:
         payload = {
             "member_id": str(member_id),
             "reason": reason,
         }
         response = self._http.post(
-            f"/api/knowledge/requests/{knowledge_request_id}/assignments",
+            f"/api/context/requests/{knowledge_request_id}/assignments",
             json=payload,
         )
         response.raise_for_status()
-        return KnowledgeRequestAssignment.model_validate(response.json())
+        return ContextRequestAssignment.model_validate(response.json())
 
 class PeopleResource(_Resource):
     """Manage organization people that Valmar may contact."""
@@ -232,13 +249,13 @@ class Valmar:
             headers={
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
-                "User-Agent": "valmar-sdk-python/0.2.0",
+                "User-Agent": "valmar-sdk-python/1.0.0",
             },
             timeout=timeout,
         )
 
-        self.knowledge = KnowledgeResource(self)
-        self.knowledge_requests = KnowledgeRequestsResource(self)
+        self.context = ContextResourceClient(self)
+        self.context_requests = ContextRequestsResource(self)
         self.people = PeopleResource(self)
         self.knowledge_gaps = KnowledgeGapsResource(self)
 

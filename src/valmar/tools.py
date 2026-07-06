@@ -78,7 +78,7 @@ def valmar_knowledge_tool(
     )
 
     async def search_valmar_knowledge(question: str) -> str:
-        """Search Valmar knowledge for an existing answer.
+        """Search Valmar context for an existing answer.
 
         If insufficient results are found, a knowledge request is created to
         collect the information from team members.
@@ -86,40 +86,40 @@ def valmar_knowledge_tool(
         Args:
             question: The question or topic to look up in the knowledge base.
         """
-        # Step 1: search existing knowledge
-        search_result = client.knowledge.search(question, limit=10)
+        search_result = client.context.search(question, limit=10)
 
-        if len(search_result.items) >= search_threshold:
+        if len(search_result.hits) >= search_threshold:
             parts = []
-            for item in search_result.items:
+            for hit in search_result.hits:
+                item = client.context.read(hit.reference)
                 parts.append(f"## {item.title}\n{item.content_md}")
             return "\n\n---\n\n".join(parts)
 
         # Step 2: fall back to context gather if project_id is available
         if client.project_id is not None:
-            handle = client.knowledge_requests.create(
+            handle = client.context_requests.create(
                 question,
                 requesting_application=requesting_application,
             )
             # Include any search results we did find
             existing = ""
-            if search_result.items:
-                snippets = [f"- {item.title}: {item.content_md[:200]}" for item in search_result.items]
+            if search_result.hits:
+                snippets = [f"- {item.title}: {item.excerpt[:200]}" for item in search_result.hits]
                 existing = "Existing partial results:\n" + "\n".join(snippets) + "\n\n"
 
             return (
                 f"{existing}"
-                f"A knowledge request has been created "
-                f"(ID: {handle.knowledge_request_id}, status: {handle.status}). "
+                f"A context request has been created "
+                f"(ID: {handle.context_request_id}, status: {handle.status}). "
                 f"Valmar will reach out to team members to collect this information. "
                 f"You can check the status later with the request ID."
             )
 
         # No project_id, just return what we have
-        if search_result.items:
+        if search_result.hits:
             parts = []
-            for item in search_result.items:
-                parts.append(f"## {item.title}\n{item.content_md}")
+            for hit in search_result.hits:
+                parts.append(f"## {hit.title}\n{hit.excerpt}")
             return "\n\n---\n\n".join(parts)
 
         return "No relevant context found in the knowledge base."

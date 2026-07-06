@@ -29,35 +29,33 @@ client = Valmar(
 
 `base_url` is required because Valmar is deployed per customer. Use the base URL for your own Valmar deployment.
 
-## Search knowledge
+## Search context
 
 Find relevant saved knowledge across the configured project.
 
 ```python
-results = client.knowledge.search("deployment process")
+results = client.context.search("deployment process")
 
-for item in results.items:
-    print(f"{item.title} ({item.confidence})")
-    if item.metadata:
-        print(f"Experts: {', '.join(item.metadata.expert_names)}")
-        print(f"Approved at: {item.metadata.approved_at}")
-    print(item.content_md)
+for hit in results.hits:
+    resource = client.context.read(hit.reference)
+    print(f"{hit.title} ({hit.score})")
+    print(resource.content_md)
 ```
 
-## Create a knowledge request
+## Create a context request
 
 Create a knowledge request that gets routed to the right people in your organization.
 
 ```python
-handle = client.knowledge_requests.create(
+handle = client.context_requests.create(
     "How do we handle database migrations in production?",
     background_context="Planning a schema change for the orders table",
 )
 
-print(f"Request created: {handle.knowledge_request_id}")
+print(f"Request created: {handle.context_request_id}")
 print(f"Status: {handle.status}")
 
-request = client.knowledge_requests.get(handle.knowledge_request_id)
+request = client.context_requests.get(handle.context_request_id)
 if request.status == "completed":
     print(request.result_summary)
 ```
@@ -103,7 +101,7 @@ with Valmar(
     organization_id="your-org-id",
     project_id="your-project-id",
 ) as client:
-    results = client.knowledge.search("onboarding process")
+    results = client.context.search("onboarding process")
 ```
 
 ## Error handling
@@ -114,7 +112,7 @@ The SDK raises `httpx.HTTPStatusError` for non-2xx responses.
 import httpx
 
 try:
-    client.knowledge.search("test")
+    client.context.search("test")
 except httpx.HTTPStatusError as e:
     print(f"API error {e.response.status_code}: {e.response.text}")
 ```

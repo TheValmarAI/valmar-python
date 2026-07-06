@@ -29,6 +29,37 @@ def build_client(handler: httpx.MockTransport) -> Valmar:
 
 
 class ValmarTest(unittest.TestCase):
+    def test_read_context_uses_reference_uri(self) -> None:
+        reference_uri = f"valmar://context/{PROJECT_ID}/unstructured/{KNOWLEDGE_ITEM_ID}"
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            self.assertEqual(
+                request.url.path,
+                f"/api/context/resources/unstructured/{KNOWLEDGE_ITEM_ID}",
+            )
+            return httpx.Response(
+                200,
+                json={
+                    "reference": {
+                        "project_id": PROJECT_ID,
+                        "module": "unstructured",
+                        "resource_id": KNOWLEDGE_ITEM_ID,
+                        "uri": reference_uri,
+                    },
+                    "title": "Runbook",
+                    "content_md": "Use the release checklist.",
+                    "provenance": {},
+                    "review_status": "auto_accepted",
+                    "confidence": 0.8,
+                    "created_at": "2026-01-01T00:00:00Z",
+                    "updated_at": "2026-01-01T00:00:00Z",
+                },
+            )
+
+        resource = build_client(httpx.MockTransport(handler)).context.read(reference_uri)
+        self.assertEqual(resource.reference.resource_id, UUID(KNOWLEDGE_ITEM_ID))
+        self.assertEqual(resource.content_md, "Use the release checklist.")
+
     def test_knowledge_gaps_workflow_uses_project_scoped_paths(self) -> None:
         seen: list[tuple[str, str, object | None]] = []
 
@@ -96,27 +127,31 @@ class ValmarTest(unittest.TestCase):
             ],
         )
 
-    def test_search_knowledge_sends_project_scope_and_parses_items(self) -> None:
+    def test_search_context_sends_project_scope_and_parses_hits(self) -> None:
         seen_body: dict[str, object] = {}
 
         def handler(request: httpx.Request) -> httpx.Response:
             self.assertEqual(request.method, "POST")
-            self.assertEqual(request.url.path, "/api/knowledge/search")
+            self.assertEqual(request.url.path, "/api/context/search")
             seen_body.update(json.loads(request.content))
             return httpx.Response(
                 200,
                 json={
-                    "items": [
+                    "hits": [
                         {
-                            "id": KNOWLEDGE_ITEM_ID,
+                            "reference": {
+                                "project_id": PROJECT_ID,
+                                "module": "unstructured",
+                                "resource_id": KNOWLEDGE_ITEM_ID,
+                                "uri": (
+                                    f"valmar://context/{PROJECT_ID}/unstructured/"
+                                    f"{KNOWLEDGE_ITEM_ID}"
+                                ),
+                            },
                             "created_at": "2026-01-01T00:00:00Z",
-                            "updated_at": "2026-01-01T00:00:00Z",
-                            "organization_id": ORGANIZATION_ID,
-                            "project_id": PROJECT_ID,
-                            "knowledge_request_id": KNOWLEDGE_REQUEST_ID,
-                            "type": "text",
                             "title": "Deployment process",
-                            "content_md": "Use the release checklist.",
+                            "excerpt": "Use the release checklist.",
+                            "score": 0.8,
                             "metadata": {
                                 "expert_names": ["Employee One"],
                                 "chat_participants": [
@@ -129,19 +164,17 @@ class ValmarTest(unittest.TestCase):
                                 ],
                                 "approved_at": "2026-01-02T00:00:00Z",
                             },
-                            "provenance": {},
                             "source_thread_id": "66666666-6666-4666-8666-666666666666",
-                            "confidence": 0.8,
-                            "review_status": "auto_accepted",
+                            "source_context_request_id": KNOWLEDGE_REQUEST_ID,
                             "source_member_ids": [MEMBER_ID],
                         }
                     ],
-                    "total_count": 1,
+                    "searched_modules": ["unstructured"],
                 },
             )
 
         client = build_client(httpx.MockTransport(handler))
-        result = client.knowledge.search("deployment", limit=3)
+        result = client.context.search("deployment", limit=3)
 
         self.assertEqual(
             seen_body,
@@ -149,26 +182,28 @@ class ValmarTest(unittest.TestCase):
                 "organization_id": ORGANIZATION_ID,
                 "project_id": PROJECT_ID,
                 "query": "deployment",
-                "types": [],
+                "modules": [],
                 "source_member_ids": [],
                 "limit": 3,
             },
         )
-        self.assertEqual(result.items[0].knowledge_request_id, UUID(KNOWLEDGE_REQUEST_ID))
-        self.assertIsNotNone(result.items[0].metadata)
-        assert result.items[0].metadata is not None
-        self.assertEqual(result.items[0].metadata.expert_names, ["Employee One"])
-        self.assertEqual(len(result.items[0].metadata.chat_participants), 1)
         self.assertEqual(
-            result.items[0].metadata.chat_participants[0].member_id,
+            result.hits[0].source_context_request_id, UUID(KNOWLEDGE_REQUEST_ID)
+        )
+        self.assertIsNotNone(result.hits[0].metadata)
+        assert result.hits[0].metadata is not None
+        self.assertEqual(result.hits[0].metadata.expert_names, ["Employee One"])
+        self.assertEqual(len(result.hits[0].metadata.chat_participants), 1)
+        self.assertEqual(
+            result.hits[0].metadata.chat_participants[0].member_id,
             UUID(MEMBER_ID),
         )
-        self.assertEqual(result.items[0].metadata.approved_at.year, 2026)
+        self.assertEqual(result.hits[0].metadata.approved_at.year, 2026)
         self.assertEqual(
-            result.items[0].source_thread_id,
+            result.hits[0].source_thread_id,
             UUID("66666666-6666-4666-8666-666666666666"),
         )
-        self.assertEqual(result.items[0].source_member_ids, [UUID(MEMBER_ID)])
+        self.assertEqual(result.hits[0].source_member_ids, [UUID(MEMBER_ID)])
 
     def test_create_and_get_knowledge_request_use_new_names(self) -> None:
         paths: list[str] = []
@@ -182,9 +217,9 @@ class ValmarTest(unittest.TestCase):
                 return httpx.Response(
                     200,
                     json={
-                        "knowledge_request_id": KNOWLEDGE_REQUEST_ID,
+                        "context_request_id": KNOWLEDGE_REQUEST_ID,
                         "status": "pending",
-                        "resource_uri": f"valmar://knowledge-requests/{KNOWLEDGE_REQUEST_ID}",
+                        "resource_uri": f"valmar://context-requests/{KNOWLEDGE_REQUEST_ID}",
                         "message": "Request submitted.",
                     },
                 )
@@ -211,13 +246,13 @@ class ValmarTest(unittest.TestCase):
             )
 
         client = build_client(httpx.MockTransport(handler))
-        handle = client.knowledge_requests.create(
+        handle = client.context_requests.create(
             "How do releases work?",
             requesting_application="test-agent",
         )
-        request = client.knowledge_requests.get(handle.knowledge_request_id)
+        request = client.context_requests.get(handle.context_request_id)
 
-        self.assertEqual(handle.knowledge_request_id, UUID(KNOWLEDGE_REQUEST_ID))
+        self.assertEqual(handle.context_request_id, UUID(KNOWLEDGE_REQUEST_ID))
         self.assertEqual(request.result_summary, "Use the checklist.")
         self.assertIsNotNone(request.answer)
         assert request.answer is not None
@@ -225,14 +260,14 @@ class ValmarTest(unittest.TestCase):
         self.assertEqual(
             paths,
             [
-                "/api/knowledge/requests",
-                f"/api/knowledge/requests/{KNOWLEDGE_REQUEST_ID}",
+                "/api/context/requests",
+                f"/api/context/requests/{KNOWLEDGE_REQUEST_ID}",
             ],
         )
 
     def test_list_knowledge_requests_and_import_people(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
-            if request.url.path.endswith("/knowledge-requests"):
+            if request.url.path == "/api/context/requests":
                 return httpx.Response(
                     200,
                     json=[
@@ -267,7 +302,7 @@ class ValmarTest(unittest.TestCase):
 
         client = build_client(httpx.MockTransport(handler))
 
-        requests = client.knowledge_requests.list()
+        requests = client.context_requests.list()
         result = client.people.import_bulk(
             [CreatePersonInput(email="ada@example.com", display_name="Ada Lovelace")]
         )
@@ -305,7 +340,7 @@ class ValmarTest(unittest.TestCase):
             )
 
         client = build_client(httpx.MockTransport(handler))
-        assignment = client.knowledge_requests.assign(
+        assignment = client.context_requests.assign(
             KNOWLEDGE_REQUEST_ID,
             member_id=MEMBER_ID,
             reason="Manual assignment.",
@@ -313,7 +348,7 @@ class ValmarTest(unittest.TestCase):
 
         self.assertEqual(
             seen_path,
-            f"/api/knowledge/requests/{KNOWLEDGE_REQUEST_ID}/assignments",
+            f"/api/context/requests/{KNOWLEDGE_REQUEST_ID}/assignments",
         )
         self.assertEqual(
             seen_body,
@@ -328,9 +363,9 @@ class ValmarTest(unittest.TestCase):
     def test_removed_synthesis_helpers_are_not_exposed(self) -> None:
         client = build_client(httpx.MockTransport(lambda _request: httpx.Response(200, json={})))
 
-        self.assertFalse(hasattr(client.knowledge_requests, "synthesize"))
-        self.assertFalse(hasattr(client.knowledge_requests, "ignore_synthesis"))
-        self.assertFalse(hasattr(client.knowledge_requests, "exclude_assignment_from_synthesis"))
+        self.assertFalse(hasattr(client.context_requests, "synthesize"))
+        self.assertFalse(hasattr(client.context_requests, "ignore_synthesis"))
+        self.assertFalse(hasattr(client.context_requests, "exclude_assignment_from_synthesis"))
 
 
 if __name__ == "__main__":

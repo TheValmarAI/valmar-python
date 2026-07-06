@@ -79,6 +79,10 @@ class KnowledgeItemMetadata(ValmarModel):
     approved_at: datetime | None = None
 
 
+ContextProvenance = KnowledgeItemProvenance
+ContextMetadata = KnowledgeItemMetadata
+
+
 class KnowledgeRequestAnswer(ValmarModel):
     status: KnowledgeRequestResolutionStatus
     answer_text: str
@@ -123,9 +127,43 @@ class KnowledgeItem(ValmarModel):
     source_member_ids: list[UUID] = Field(default_factory=list)
 
 
-class KnowledgeSearchResult(ValmarModel):
-    items: list[KnowledgeItem] = Field(default_factory=list)
-    total_count: int = 0
+class ContextReference(ValmarModel):
+    project_id: UUID
+    module: str
+    resource_id: UUID
+    uri: str
+
+
+class ContextResource(ValmarModel):
+    reference: ContextReference
+    title: str
+    content_md: str
+    provenance: KnowledgeItemProvenance
+    review_status: ReviewStatus
+    confidence: float
+    source_member_ids: list[UUID] = Field(default_factory=list)
+    source_thread_id: UUID | None = None
+    source_context_request_id: UUID | None = None
+    metadata: KnowledgeItemMetadata | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ContextSearchHit(ValmarModel):
+    reference: ContextReference
+    title: str
+    excerpt: str
+    score: float
+    source_member_ids: list[UUID] = Field(default_factory=list)
+    source_thread_id: UUID | None = None
+    source_context_request_id: UUID | None = None
+    metadata: KnowledgeItemMetadata | None = None
+    created_at: datetime
+
+
+class ContextSearchResult(ValmarModel):
+    hits: list[ContextSearchHit] = Field(default_factory=list)
+    searched_modules: list[str] = Field(default_factory=list)
 
 
 class KnowledgeRequestAssignedMember(ValmarModel):
@@ -186,15 +224,22 @@ class KnowledgeRequestListItem(ValmarModel):
     assigned_members: list[KnowledgeRequestAssignedMember] = Field(default_factory=list)
 
 
-class KnowledgeRequestHandle(ValmarModel):
-    knowledge_request_id: UUID = Field(
-        validation_alias="knowledge_request_id",
-        serialization_alias="knowledge_request_id",
-    )
+class ContextRequestHandle(ValmarModel):
+    context_request_id: UUID
     status: KnowledgeRequestStatus
     resource_uri: str
     message: str
     filter_decision: KnowledgeRequestFilterDecision | None = None
+
+
+ContextRequest = KnowledgeRequest
+ContextRequestAnswer = KnowledgeRequestAnswer
+ContextRequestAssignment = KnowledgeRequestAssignment
+ContextRequestAssignmentStatus = KnowledgeRequestAssignmentStatus
+ContextRequestFilterDecision = KnowledgeRequestFilterDecision
+ContextRequestListItem = KnowledgeRequestListItem
+ContextRequestResolutionStatus = KnowledgeRequestResolutionStatus
+ContextRequestStatus = KnowledgeRequestStatus
 
 
 class Person(ValmarModel):
@@ -218,11 +263,14 @@ class CreateKnowledgeRequestInput(ValmarModel):
     source_agent_config_id: UUID | None = None
 
 
-class SearchKnowledgeInput(ValmarModel):
+CreateContextRequestInput = CreateKnowledgeRequestInput
+
+
+class SearchContextInput(ValmarModel):
     organization_id: UUID
     project_id: UUID
     query: str = ""
-    types: list[KnowledgeItemType] = Field(default_factory=list)
+    modules: list[str] = Field(default_factory=list)
     source_member_ids: list[UUID] = Field(default_factory=list)
     limit: int = Field(default=10, ge=1, le=100)
 
