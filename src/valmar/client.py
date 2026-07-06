@@ -15,6 +15,7 @@ from valmar.models import (
     ContextRequestListItem,
     ContextResource,
     ContextSearchResult,
+    ContextTrace,
     CreateContextRequestInput,
     CreatePersonInput,
     ImportPeopleInput,
@@ -83,6 +84,18 @@ class ContextResourceClient(_Resource):
         return ContextSearchResult.model_validate(response.json())
 
     def read(self, reference: ContextReference | str) -> ContextResource:
+        module, resource_id = self._reference_parts(reference)
+        response = self._http.get(f"/api/context/resources/{module}/{resource_id}")
+        response.raise_for_status()
+        return ContextResource.model_validate(response.json())
+
+    def trace(self, reference: ContextReference | str) -> ContextTrace:
+        module, resource_id = self._reference_parts(reference)
+        response = self._http.get(f"/api/context/resources/{module}/{resource_id}/trace")
+        response.raise_for_status()
+        return ContextTrace.model_validate(response.json())
+
+    def _reference_parts(self, reference: ContextReference | str) -> tuple[str, str]:
         uri = reference.uri if isinstance(reference, ContextReference) else reference
         prefix = "valmar://context/"
         if not uri.startswith(prefix):
@@ -93,9 +106,7 @@ class ContextResourceClient(_Resource):
         project_id, module, resource_id = parts
         if UUID(project_id) != self._require_project_id():
             raise ValueError("reference belongs to a different project.")
-        response = self._http.get(f"/api/context/resources/{module}/{resource_id}")
-        response.raise_for_status()
-        return ContextResource.model_validate(response.json())
+        return module, resource_id
 
 
 class ContextRequestsResource(_Resource):

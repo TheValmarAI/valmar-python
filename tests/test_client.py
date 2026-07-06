@@ -29,6 +29,45 @@ def build_client(handler: httpx.MockTransport) -> Valmar:
 
 
 class ValmarTest(unittest.TestCase):
+    def test_trace_context_uses_shared_trace_endpoint(self) -> None:
+        reference_uri = f"valmar://context/{PROJECT_ID}/unstructured/{KNOWLEDGE_ITEM_ID}"
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            self.assertEqual(
+                request.url.path,
+                f"/api/context/resources/unstructured/{KNOWLEDGE_ITEM_ID}/trace",
+            )
+            resource = {
+                "reference": {
+                    "project_id": PROJECT_ID,
+                    "module": "unstructured",
+                    "resource_id": KNOWLEDGE_ITEM_ID,
+                    "uri": reference_uri,
+                },
+                "title": "Runbook",
+                "content_md": "Use the release checklist.",
+                "provenance": {},
+                "review_status": "auto_accepted",
+                "confidence": 0.8,
+                "created_at": "2026-01-01T00:00:00Z",
+                "updated_at": "2026-01-01T00:00:00Z",
+            }
+            return httpx.Response(
+                200,
+                json={
+                    "reference": resource["reference"],
+                    "resource": resource,
+                    "source_thread_ids": [],
+                    "conversations": {},
+                    "history": [],
+                    "audit_events": [],
+                    "module_details": {},
+                },
+            )
+
+        trace = build_client(httpx.MockTransport(handler)).context.trace(reference_uri)
+        self.assertEqual(trace.reference.resource_id, UUID(KNOWLEDGE_ITEM_ID))
+
     def test_read_context_uses_reference_uri(self) -> None:
         reference_uri = f"valmar://context/{PROJECT_ID}/unstructured/{KNOWLEDGE_ITEM_ID}"
 

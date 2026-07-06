@@ -166,6 +166,49 @@ class ContextSearchResult(ValmarModel):
     searched_modules: list[str] = Field(default_factory=list)
 
 
+class ContextTraceMessage(ValmarModel):
+    id: str
+    role: str
+    parts: list[dict[str, Any]] = Field(default_factory=list)
+    metadata: Any = None
+
+
+class ContextTraceConversation(ValmarModel):
+    thread_id: UUID
+    member_id: UUID | None = None
+    member_display_name: str | None = None
+    subject: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    messages: list[ContextTraceMessage] = Field(default_factory=list)
+
+
+class ContextTraceEvent(ValmarModel):
+    event_type: str
+    title: str
+    summary: str
+    timestamp: datetime | None = None
+    actor_label: str | None = None
+    member_id: UUID | None = None
+    member_display_name: str | None = None
+    resource_id: UUID | None = None
+    source_request_id: UUID | None = None
+    assignment_id: UUID | None = None
+    conversation_thread_id: UUID | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ContextTrace(ValmarModel):
+    reference: ContextReference
+    resource: ContextResource
+    source_thread_ids: list[UUID] = Field(default_factory=list)
+    conversations: dict[UUID, ContextTraceConversation] = Field(default_factory=dict)
+    history: list[ContextTraceEvent] = Field(default_factory=list)
+    audit_events: list[dict[str, Any]] = Field(default_factory=list)
+    module_details: dict[str, Any] = Field(default_factory=dict)
+
+
 class KnowledgeRequestAssignedMember(ValmarModel):
     member_id: UUID
     display_name: str

@@ -40,6 +40,9 @@ for hit in results.hits:
     resource = client.context.read(hit.reference)
     print(f"{hit.title} ({hit.score})")
     print(resource.content_md)
+
+    trace = client.context.trace(hit.reference)
+    print(trace.source_thread_ids)
 ```
 
 ## Create a context request
