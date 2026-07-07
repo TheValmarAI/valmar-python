@@ -40,7 +40,7 @@ def valmar_knowledge_tool(
     """Return a Pydantic AI tool function for retrieving Valmar knowledge.
 
     The tool first searches existing knowledge. If fewer than ``search_threshold``
-    results are found, it falls back to creating a knowledge request.
+    results are found, it falls back to creating a context request.
 
     Parameters
     ----------
@@ -80,7 +80,7 @@ def valmar_knowledge_tool(
     async def search_valmar_knowledge(question: str) -> str:
         """Search Valmar context for an existing answer.
 
-        If insufficient results are found, a knowledge request is created to
+        If insufficient results are found, a context request is created to
         collect the information from team members.
 
         Args:

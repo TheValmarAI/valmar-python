@@ -153,17 +153,17 @@ class ContextRequestsResource(_Resource):
 
     def list_assignments(
         self,
-        knowledge_request_id: UUID | str,
+        context_request_id: UUID | str,
     ) -> list[ContextRequestAssignment]:
         response = self._http.get(
-            f"/api/context/requests/{knowledge_request_id}/assignments"
+            f"/api/context/requests/{context_request_id}/assignments"
         )
         response.raise_for_status()
         return [ContextRequestAssignment.model_validate(item) for item in response.json()]
 
     def assign(
         self,
-        knowledge_request_id: UUID | str,
+        context_request_id: UUID | str,
         *,
         member_id: UUID | str,
         reason: str | None = None,
@@ -173,7 +173,7 @@ class ContextRequestsResource(_Resource):
             "reason": reason,
         }
         response = self._http.post(
-            f"/api/context/requests/{knowledge_request_id}/assignments",
+            f"/api/context/requests/{context_request_id}/assignments",
             json=payload,
         )
         response.raise_for_status()

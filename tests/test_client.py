@@ -154,7 +154,7 @@ class ValmarTest(unittest.TestCase):
             "ranked_gaps": []
         }
         submissions = client.knowledge_gaps.submit_ranked_gaps(RUN_ID, gap_ranks=[1])
-        assert submissions[0].knowledge_request_id == UUID(KNOWLEDGE_REQUEST_ID)
+        assert submissions[0].context_request_id == UUID(KNOWLEDGE_REQUEST_ID)
         base = f"/api/projects/{PROJECT_ID}/knowledge-gaps"
         self.assertEqual(
             seen,

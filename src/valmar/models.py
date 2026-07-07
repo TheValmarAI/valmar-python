@@ -14,7 +14,7 @@ class ValmarModel(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
-class KnowledgeRequestStatus(StrEnum):
+class ContextRequestStatus(StrEnum):
     PENDING = "pending"
     UNASSIGNED = "unassigned"
     DEFERRED = "deferred"
@@ -27,7 +27,7 @@ class KnowledgeRequestStatus(StrEnum):
     FAILED = "failed"
 
 
-class KnowledgeRequestAssignmentStatus(StrEnum):
+class ContextRequestAssignmentStatus(StrEnum):
     PENDING = "pending"
     DEFERRED = "deferred"
     WAITING_FOR_REPLY = "waiting_for_reply"
@@ -36,12 +36,12 @@ class KnowledgeRequestAssignmentStatus(StrEnum):
     FAILED = "failed"
 
 
-class KnowledgeRequestResolutionStatus(StrEnum):
+class ContextRequestResolutionStatus(StrEnum):
     RESOLVED = "resolved"
     NOT_RESOLVED = "not_resolved"
 
 
-class KnowledgeItemType(StrEnum):
+class UnstructuredContextType(StrEnum):
     TEXT = "text"
 
 
@@ -57,36 +57,32 @@ class ProjectRole(StrEnum):
     SERVICE = "service"
 
 
-class KnowledgeItemProvenance(ValmarModel):
+class ContextProvenance(ValmarModel):
     source_agent_run_id: UUID | None = None
-    source_knowledge_request_id: UUID | None = Field(
+    source_context_request_id: UUID | None = Field(
         default=None,
         validation_alias="source_knowledge_request_id",
         serialization_alias="source_knowledge_request_id",
     )
 
 
-class KnowledgeItemChatParticipant(ValmarModel):
+class ContextChatParticipant(ValmarModel):
     member_id: UUID
     display_name: str
     email: str
     title: str | None = None
 
 
-class KnowledgeItemMetadata(ValmarModel):
+class ContextMetadata(ValmarModel):
     expert_names: list[str] = Field(default_factory=list)
-    chat_participants: list[KnowledgeItemChatParticipant] = Field(default_factory=list)
+    chat_participants: list[ContextChatParticipant] = Field(default_factory=list)
     approved_at: datetime | None = None
 
 
-ContextProvenance = KnowledgeItemProvenance
-ContextMetadata = KnowledgeItemMetadata
-
-
-class KnowledgeRequestAnswer(ValmarModel):
-    status: KnowledgeRequestResolutionStatus
+class ContextRequestAnswer(ValmarModel):
+    status: ContextRequestResolutionStatus
     answer_text: str
-    answer_knowledge_items: list[UUID] = Field(
+    answer_context_resource_ids: list[UUID] = Field(
         default_factory=list,
         validation_alias="answer_knowledge_items",
         serialization_alias="answer_knowledge_items",
@@ -94,37 +90,14 @@ class KnowledgeRequestAnswer(ValmarModel):
     source_member_ids: list[UUID] = Field(default_factory=list)
 
 
-class KnowledgeRequestFilterDecision(ValmarModel):
+class ContextRequestFilterDecision(ValmarModel):
     decision: Literal["approved", "rejected"]
     reason: str
-    matching_knowledge_request_ids: list[UUID] = Field(
+    matching_context_request_ids: list[UUID] = Field(
         default_factory=list,
         validation_alias="matching_knowledge_request_ids",
         serialization_alias="matching_knowledge_request_ids",
     )
-
-
-class KnowledgeItem(ValmarModel):
-    id: UUID
-    created_at: datetime
-    updated_at: datetime
-    organization_id: UUID
-    project_id: UUID
-    knowledge_request_id: UUID | None = Field(
-        default=None,
-        validation_alias="knowledge_request_id",
-        serialization_alias="knowledge_request_id",
-    )
-    knowledge_request_assignment_id: UUID | None = None
-    type: KnowledgeItemType
-    title: str
-    content_md: str
-    metadata: KnowledgeItemMetadata | None = None
-    provenance: KnowledgeItemProvenance
-    source_thread_id: UUID | None = None
-    confidence: float = 0.65
-    review_status: ReviewStatus = ReviewStatus.AUTO_ACCEPTED
-    source_member_ids: list[UUID] = Field(default_factory=list)
 
 
 class ContextReference(ValmarModel):
@@ -138,13 +111,13 @@ class ContextResource(ValmarModel):
     reference: ContextReference
     title: str
     content_md: str
-    provenance: KnowledgeItemProvenance
+    provenance: ContextProvenance
     review_status: ReviewStatus
     confidence: float
     source_member_ids: list[UUID] = Field(default_factory=list)
     source_thread_id: UUID | None = None
     source_context_request_id: UUID | None = None
-    metadata: KnowledgeItemMetadata | None = None
+    metadata: ContextMetadata | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -157,7 +130,7 @@ class ContextSearchHit(ValmarModel):
     source_member_ids: list[UUID] = Field(default_factory=list)
     source_thread_id: UUID | None = None
     source_context_request_id: UUID | None = None
-    metadata: KnowledgeItemMetadata | None = None
+    metadata: ContextMetadata | None = None
     created_at: datetime
 
 
@@ -209,13 +182,13 @@ class ContextTrace(ValmarModel):
     module_details: dict[str, Any] = Field(default_factory=dict)
 
 
-class KnowledgeRequestAssignedMember(ValmarModel):
+class ContextRequestAssignedMember(ValmarModel):
     member_id: UUID
     display_name: str
-    status: KnowledgeRequestAssignmentStatus
+    status: ContextRequestAssignmentStatus
 
 
-class KnowledgeRequest(ValmarModel):
+class ContextRequest(ValmarModel):
     id: UUID
     created_at: datetime
     updated_at: datetime
@@ -226,63 +199,56 @@ class KnowledgeRequest(ValmarModel):
     already_tried: str | None = None
     background_context: str | None = None
     candidate_member_ids: list[UUID] = Field(default_factory=list)
-    status: KnowledgeRequestStatus = KnowledgeRequestStatus.PENDING
+    status: ContextRequestStatus = ContextRequestStatus.PENDING
     source_agent_config_id: UUID | None = None
     response_deadline_at: datetime | None = None
     result_summary: str | None = None
-    answer: KnowledgeRequestAnswer | None = None
-    filter_decision: KnowledgeRequestFilterDecision | None = None
+    answer: ContextRequestAnswer | None = None
+    filter_decision: ContextRequestFilterDecision | None = None
     resolved_thread_id: UUID | None = None
     created_by_actor_id: str | None = None
-    assigned_members: list[KnowledgeRequestAssignedMember] = Field(default_factory=list)
+    assigned_members: list[ContextRequestAssignedMember] = Field(default_factory=list)
 
 
-class KnowledgeRequestAssignment(ValmarModel):
+class ContextRequestAssignment(ValmarModel):
     id: UUID
-    knowledge_request_id: UUID
+    context_request_id: UUID = Field(
+        validation_alias="knowledge_request_id",
+        serialization_alias="knowledge_request_id",
+    )
     member_id: UUID
     member_display_name: str
     member_title: str | None = None
     reason: str = ""
     score: float = 0.5
     evidence: list[dict] = Field(default_factory=list)
-    status: KnowledgeRequestAssignmentStatus
+    status: ContextRequestAssignmentStatus
     agent_run_id: UUID | None = None
     conversation_thread_id: UUID | None = None
-    answer: KnowledgeRequestAnswer | None = None
+    answer: ContextRequestAnswer | None = None
     result_summary: str | None = None
     completed_at: datetime | None = None
     created_at: datetime
 
 
-class KnowledgeRequestListItem(ValmarModel):
+class ContextRequestListItem(ValmarModel):
     id: UUID
     project_id: UUID
     requesting_application: str
     question: str
-    status: KnowledgeRequestStatus
+    status: ContextRequestStatus
     result_summary: str | None = None
-    filter_decision: KnowledgeRequestFilterDecision | None = None
+    filter_decision: ContextRequestFilterDecision | None = None
     created_at: datetime
-    assigned_members: list[KnowledgeRequestAssignedMember] = Field(default_factory=list)
+    assigned_members: list[ContextRequestAssignedMember] = Field(default_factory=list)
 
 
 class ContextRequestHandle(ValmarModel):
     context_request_id: UUID
-    status: KnowledgeRequestStatus
+    status: ContextRequestStatus
     resource_uri: str
     message: str
-    filter_decision: KnowledgeRequestFilterDecision | None = None
-
-
-ContextRequest = KnowledgeRequest
-ContextRequestAnswer = KnowledgeRequestAnswer
-ContextRequestAssignment = KnowledgeRequestAssignment
-ContextRequestAssignmentStatus = KnowledgeRequestAssignmentStatus
-ContextRequestFilterDecision = KnowledgeRequestFilterDecision
-ContextRequestListItem = KnowledgeRequestListItem
-ContextRequestResolutionStatus = KnowledgeRequestResolutionStatus
-ContextRequestStatus = KnowledgeRequestStatus
+    filter_decision: ContextRequestFilterDecision | None = None
 
 
 class Person(ValmarModel):
@@ -297,16 +263,13 @@ class Person(ValmarModel):
     description_md: str = ""
 
 
-class CreateKnowledgeRequestInput(ValmarModel):
+class CreateContextRequestInput(ValmarModel):
     project_id: UUID
     requesting_application: str
     question: str
     already_tried: str | None = None
     background_context: str | None = None
     source_agent_config_id: UUID | None = None
-
-
-CreateContextRequestInput = CreateKnowledgeRequestInput
 
 
 class SearchContextInput(ValmarModel):
@@ -368,7 +331,10 @@ class KnowledgeGapsArtifactOverview(ValmarModel):
 class KnowledgeGapsSubmission(ValmarModel):
     gap_rank: int
     gap_title: str
-    knowledge_request_id: UUID
+    context_request_id: UUID = Field(
+        validation_alias="knowledge_request_id",
+        serialization_alias="knowledge_request_id",
+    )
     submitted_at: datetime
     submitted_by_actor_id: str | None = None
 

@@ -47,7 +47,7 @@ for hit in results.hits:
 
 ## Create a context request
 
-Create a knowledge request that gets routed to the right people in your organization.
+Create a context request that gets routed to the right people in your organization.
 
 ```python
 handle = client.context_requests.create(
