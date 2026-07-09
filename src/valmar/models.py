@@ -79,17 +79,6 @@ class ContextMetadata(ValmarModel):
     approved_at: datetime | None = None
 
 
-class ContextRequestAnswer(ValmarModel):
-    status: ContextRequestResolutionStatus
-    answer_text: str
-    answer_context_resource_ids: list[UUID] = Field(
-        default_factory=list,
-        validation_alias="answer_knowledge_items",
-        serialization_alias="answer_knowledge_items",
-    )
-    source_member_ids: list[UUID] = Field(default_factory=list)
-
-
 class ContextRequestFilterDecision(ValmarModel):
     decision: Literal["approved", "rejected"]
     reason: str
@@ -107,6 +96,14 @@ class ContextReference(ValmarModel):
     uri: str
 
 
+class ContextRequestAnswer(ValmarModel):
+    status: ContextRequestResolutionStatus
+    answer_text: str
+    answer_context_resources: list[ContextReference] = Field(default_factory=list)
+    save_answer_as_unstructured: bool = False
+    source_member_ids: list[UUID] = Field(default_factory=list)
+
+
 class ContextResource(ValmarModel):
     reference: ContextReference
     title: str
@@ -118,6 +115,18 @@ class ContextResource(ValmarModel):
     source_thread_id: UUID | None = None
     source_context_request_id: UUID | None = None
     metadata: ContextMetadata | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class StructuredContextResource(ValmarModel):
+    reference: ContextReference
+    title: str
+    data: dict[str, str]
+    status: Literal["draft", "needs_review", "published", "ignored"]
+    source_member_ids: list[UUID] = Field(default_factory=list)
+    source_thread_id: UUID | None = None
+    source_context_request_id: UUID | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -174,7 +183,7 @@ class ContextTraceEvent(ValmarModel):
 
 class ContextTrace(ValmarModel):
     reference: ContextReference
-    resource: ContextResource
+    resource: ContextResource | StructuredContextResource
     source_thread_ids: list[UUID] = Field(default_factory=list)
     conversations: dict[UUID, ContextTraceConversation] = Field(default_factory=dict)
     history: list[ContextTraceEvent] = Field(default_factory=list)

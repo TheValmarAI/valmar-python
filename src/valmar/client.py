@@ -14,6 +14,7 @@ from valmar.models import (
     ContextRequestHandle,
     ContextRequestListItem,
     ContextResource,
+    StructuredContextResource,
     ContextSearchResult,
     ContextTrace,
     CreateContextRequestInput,
@@ -83,11 +84,17 @@ class ContextResourceClient(_Resource):
         response.raise_for_status()
         return ContextSearchResult.model_validate(response.json())
 
-    def read(self, reference: ContextReference | str) -> ContextResource:
+    def read(
+        self,
+        reference: ContextReference | str,
+    ) -> ContextResource | StructuredContextResource:
         module, resource_id = self._reference_parts(reference)
         response = self._http.get(f"/api/context/resources/{module}/{resource_id}")
         response.raise_for_status()
-        return ContextResource.model_validate(response.json())
+        payload = response.json()
+        if module == "structured":
+            return StructuredContextResource.model_validate(payload)
+        return ContextResource.model_validate(payload)
 
     def trace(self, reference: ContextReference | str) -> ContextTrace:
         module, resource_id = self._reference_parts(reference)

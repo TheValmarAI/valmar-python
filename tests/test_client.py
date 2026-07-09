@@ -277,7 +277,18 @@ class ValmarTest(unittest.TestCase):
                     "answer": {
                         "status": "resolved",
                         "answer_text": "Use the checklist.",
-                        "answer_knowledge_items": [KNOWLEDGE_ITEM_ID],
+                        "answer_context_resources": [
+                            {
+                                "project_id": PROJECT_ID,
+                                "module": "unstructured",
+                                "resource_id": KNOWLEDGE_ITEM_ID,
+                                "uri": (
+                                    f"valmar://context/{PROJECT_ID}/unstructured/"
+                                    f"{KNOWLEDGE_ITEM_ID}"
+                                ),
+                            }
+                        ],
+                        "save_answer_as_unstructured": False,
                         "source_member_ids": [MEMBER_ID],
                     },
                     "created_by_actor_id": "machine:test",
