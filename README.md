@@ -53,6 +53,7 @@ Create a context request that gets routed to the right people in your organizati
 handle = client.context_requests.create(
     "How do we handle database migrations in production?",
     background_context="Planning a schema change for the orders table",
+    hidden_metadata={"external_case_id": "CASE-4821"},
 )
 
 print(f"Request created: {handle.context_request_id}")
@@ -61,7 +62,12 @@ print(f"Status: {handle.status}")
 request = client.context_requests.get(handle.context_request_id)
 if request.status == "completed":
     print(request.result_summary)
+    print(request.hidden_metadata["external_case_id"])
 ```
+
+`hidden_metadata` is an immutable string-to-string map copied to every
+unstructured context snippet saved from the request. It is returned by the API
+and SDK for client-side matching, but is not exposed through MCP or to Valmar AI agents.
 
 ## List and import people
 
