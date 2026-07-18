@@ -90,6 +90,7 @@ class ValmarTest(unittest.TestCase):
                     "provenance": {},
                     "review_status": "auto_accepted",
                     "confidence": 0.8,
+                    "hidden_metadata": {"external_case_id": "CASE-1234"},
                     "created_at": "2026-01-01T00:00:00Z",
                     "updated_at": "2026-01-01T00:00:00Z",
                 },
@@ -98,6 +99,7 @@ class ValmarTest(unittest.TestCase):
         resource = build_client(httpx.MockTransport(handler)).context.read(reference_uri)
         self.assertEqual(resource.reference.resource_id, UUID(KNOWLEDGE_ITEM_ID))
         self.assertEqual(resource.content_md, "Use the release checklist.")
+        self.assertEqual(resource.hidden_metadata, {"external_case_id": "CASE-1234"})
 
     def test_knowledge_gaps_workflow_uses_project_scoped_paths(self) -> None:
         seen: list[tuple[str, str, object | None]] = []
@@ -191,6 +193,7 @@ class ValmarTest(unittest.TestCase):
                             "title": "Deployment process",
                             "excerpt": "Use the release checklist.",
                             "score": 0.8,
+                            "hidden_metadata": {"external_case_id": "CASE-1234"},
                             "metadata": {
                                 "expert_names": ["Employee One"],
                                 "chat_participants": [
@@ -229,6 +232,10 @@ class ValmarTest(unittest.TestCase):
         self.assertEqual(
             result.hits[0].source_context_request_id, UUID(KNOWLEDGE_REQUEST_ID)
         )
+        self.assertEqual(
+            result.hits[0].hidden_metadata,
+            {"external_case_id": "CASE-1234"},
+        )
         self.assertIsNotNone(result.hits[0].metadata)
         assert result.hits[0].metadata is not None
         self.assertEqual(result.hits[0].metadata.expert_names, ["Employee One"])
@@ -253,6 +260,10 @@ class ValmarTest(unittest.TestCase):
                 body = json.loads(request.content)
                 self.assertEqual(body["project_id"], PROJECT_ID)
                 self.assertEqual(body["requesting_application"], "test-agent")
+                self.assertEqual(
+                    body["hidden_metadata"],
+                    {"external_case_id": "CASE-1234"},
+                )
                 return httpx.Response(
                     200,
                     json={
@@ -272,6 +283,7 @@ class ValmarTest(unittest.TestCase):
                     "project_id": PROJECT_ID,
                     "requesting_application": "test-agent",
                     "question": "How do releases work?",
+                    "hidden_metadata": {"external_case_id": "CASE-1234"},
                     "status": "completed",
                     "result_summary": "Use the checklist.",
                     "answer": {
@@ -299,11 +311,13 @@ class ValmarTest(unittest.TestCase):
         handle = client.context_requests.create(
             "How do releases work?",
             requesting_application="test-agent",
+            hidden_metadata={"external_case_id": "CASE-1234"},
         )
         request = client.context_requests.get(handle.context_request_id)
 
         self.assertEqual(handle.context_request_id, UUID(KNOWLEDGE_REQUEST_ID))
         self.assertEqual(request.result_summary, "Use the checklist.")
+        self.assertEqual(request.hidden_metadata, {"external_case_id": "CASE-1234"})
         self.assertIsNotNone(request.answer)
         assert request.answer is not None
         self.assertEqual(request.answer.source_member_ids, [UUID(MEMBER_ID)])
@@ -326,6 +340,7 @@ class ValmarTest(unittest.TestCase):
                             "project_id": PROJECT_ID,
                             "requesting_application": "admin-ui",
                             "question": "Where is the policy?",
+                            "hidden_metadata": {"external_case_id": "CASE-1234"},
                             "status": "pending",
                             "created_at": "2026-01-01T00:00:00Z",
                             "assigned_members": [],
@@ -358,6 +373,10 @@ class ValmarTest(unittest.TestCase):
         )
 
         self.assertEqual(requests[0].question, "Where is the policy?")
+        self.assertEqual(
+            requests[0].hidden_metadata,
+            {"external_case_id": "CASE-1234"},
+        )
         self.assertEqual(result.created[0].email, "ada@example.com")
 
     def test_manually_assign_knowledge_request(self) -> None:

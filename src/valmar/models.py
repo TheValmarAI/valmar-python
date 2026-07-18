@@ -114,6 +114,7 @@ class ContextResource(ValmarModel):
     source_member_ids: list[UUID] = Field(default_factory=list)
     source_thread_id: UUID | None = None
     source_context_request_id: UUID | None = None
+    hidden_metadata: dict[str, str] = Field(default_factory=dict)
     metadata: ContextMetadata | None = None
     created_at: datetime
     updated_at: datetime
@@ -139,6 +140,7 @@ class ContextSearchHit(ValmarModel):
     source_member_ids: list[UUID] = Field(default_factory=list)
     source_thread_id: UUID | None = None
     source_context_request_id: UUID | None = None
+    hidden_metadata: dict[str, str] = Field(default_factory=dict)
     metadata: ContextMetadata | None = None
     created_at: datetime
 
@@ -207,6 +209,7 @@ class ContextRequest(ValmarModel):
     question: str
     already_tried: str | None = None
     background_context: str | None = None
+    hidden_metadata: dict[str, str] = Field(default_factory=dict)
     candidate_member_ids: list[UUID] = Field(default_factory=list)
     status: ContextRequestStatus = ContextRequestStatus.PENDING
     source_agent_config_id: UUID | None = None
@@ -245,6 +248,7 @@ class ContextRequestListItem(ValmarModel):
     project_id: UUID
     requesting_application: str
     question: str
+    hidden_metadata: dict[str, str] = Field(default_factory=dict)
     status: ContextRequestStatus
     result_summary: str | None = None
     filter_decision: ContextRequestFilterDecision | None = None
@@ -278,6 +282,7 @@ class CreateContextRequestInput(ValmarModel):
     question: str
     already_tried: str | None = None
     background_context: str | None = None
+    hidden_metadata: dict[str, str] = Field(default_factory=dict)
     source_agent_config_id: UUID | None = None
 
 

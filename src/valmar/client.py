@@ -125,6 +125,7 @@ class ContextRequestsResource(_Resource):
         *,
         already_tried: str | None = None,
         background_context: str | None = None,
+        hidden_metadata: dict[str, str] | None = None,
         requesting_application: str = "valmar-sdk-python",
         source_agent_config_id: UUID | str | None = None,
     ) -> ContextRequestHandle:
@@ -134,6 +135,7 @@ class ContextRequestsResource(_Resource):
             question=question,
             already_tried=already_tried,
             background_context=background_context,
+            hidden_metadata=hidden_metadata or {},
             source_agent_config_id=(
                 UUID(str(source_agent_config_id)) if source_agent_config_id is not None else None
             ),
